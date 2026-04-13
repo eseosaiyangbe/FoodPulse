@@ -1,0 +1,269 @@
+groups:
+  # ========================================
+  # Generic target & exporter health
+  # ========================================
+  - name: yelb-generic-health
+    rules:
+      # Any core job (Prometheus, DB, cache, HAProxy, blackbox) down
+      - alert: YelbTargetDown
+        expr: up{job=~"prometheus|postgres|redis|haproxy|blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: infra
+        annotations:
+          summary: "Target down (job={{ $labels.job }}, instance={{ $labels.instance }})"
+          description: >
+            Prometheus cannot scrape {{ $labels.job }} on {{ $labels.instance }}.
+            Check container status, networking (yelbnet), and exporter logs.
+          runbook_url: "https://docs.example.com/runbooks/yelb-target-down"
+
+  # ========================================
+  # Blackbox: Yelb UI + appserver HTTP
+  # ========================================
+  - name: yelb-blackbox-http
+    rules:
+      # UI down or non-2xx
+      - alert: YelbUiHttpDown
+        expr: probe_success{job="blackbox-http", instance="http://yelb-ui/"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: yelb-ui
+        annotations:
+          summary: "Yelb UI is not returning HTTP 2xx"
+          description: >
+            Blackbox probe for Yelb UI (http://yelb-ui/) is failing.
+            Check yelb-ui container, HAProxy, and application logs.
+          runbook_url: "https://docs.example.com/runbooks/yelb-ui-http-down"
+
+      # Appserver API down or non-2xx
+      - alert: YelbAppserverHttpDown
+        expr: probe_success{job="blackbox-http", instance="http://yelb-appserver:4567/api/getstats"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: yelb-appserver
+        annotations:
+          summary: "Yelb appserver API is not returning HTTP 2xx"
+          description: >
+            Blackbox probe for Yelb appserver stats endpoint
+            (http://yelb-appserver:4567/api/getstats) is failing.
+            Check yelb-appserver container, DB/Redis connectivity, and logs.
+          runbook_url: "https://docs.example.com/runbooks/yelb-appserver-http-down"
+
+      # Optional: slow responses from either UI or appserver
+      - alert: YelbHttpProbeSlow
+        expr: probe_duration_seconds{job="blackbox-http"} > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: http
+        annotations:
+          summary: "HTTP probe latency is elevated ({{ $labels.instance }})"
+          description: >
+            Blackbox HTTP probe duration is above 0.5 seconds for
+            {{ $labels.instance }}.
+            Investigate load, HAProxy config, or downstream DB/Redis latency.
+          runbook_url: "https://docs.example.com/runbooks/yelb-http-probe-slow"
+
+  # ========================================
+  # Postgres: exporter, health, replication
+  # ========================================
+  - name: yelb-postgres
+    rules:
+      # Postgres exporter itself not responding
+      - alert: PostgresExporterDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: postgres
+        annotations:
+          summary: "Postgres exporter is down"
+          description: >
+            The postgres-exporter target (job=postgres) is down.
+            Check the postgres-exporter container and DATA_SOURCE_NAME DSN.
+          runbook_url: "https://docs.example.com/runbooks/postgres-exporter-down"
+
+      # Postgres instance not up (from exporter metric)
+      - alert: PostgresInstanceDown
+        expr: pg_up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: postgres
+        annotations:
+          summary: "Postgres instance is down ({{ $labels.instance }})"
+          description: >
+            pg_up == 0 for instance {{ $labels.instance }}.
+            Check yelb-db or replica containers and logs.
+          runbook_url: "https://docs.example.com/runbooks/postgres-instance-down"
+
+      # Replication lag high on any replica
+      # Uses the same metric name you used in the dashboard.
+      - alert: PostgresReplicationLagHigh
+        expr: max(pg_replication_lag{job="postgres"}) by (application_name, instance) > 104857600
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: postgres
+        annotations:
+          summary: "Postgres replication lag is high"
+          description: >
+            Replication lag for replica {{ $labels.application_name }}
+            (instance {{ $labels.instance }}) is above 100 MiB.
+            Check network, replica load, and WAL retention.
+          runbook_url: "https://docs.example.com/runbooks/postgres-replication-lag-high"
+
+      # Very high write rate – capacity / saturation signal
+      - alert: PostgresHighTransactionRate
+        expr: sum(
+                rate(pg_stat_database_xact_commit{job="postgres",datname!~"template.*"}[5m]) +
+                rate(pg_stat_database_xact_rollback{job="postgres",datname!~"template.*"}[5m])
+              ) > 2000
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: postgres
+        annotations:
+          summary: "Postgres transaction throughput is high"
+          description: >
+            Combined commit+rollback transaction rate across all databases
+            is above 2000 tx/s. Verify that this is expected for the Yelb env,
+            or consider scaling Postgres / tuning connection pools.
+          runbook_url: "https://docs.example.com/runbooks/postgres-high-transaction-rate"
+
+  # ========================================
+  # Redis: exporter, health, memory pressure
+  # ========================================
+  - name: yelb-redis
+    rules:
+      # Redis exporter down
+      - alert: RedisExporterDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: redis
+        annotations:
+          summary: "Redis exporter is down"
+          description: >
+            The redis-exporter target (job=redis) is down.
+            Check the redis-exporter container, REDIS_ADDR and REDIS_PASSWORD.
+          runbook_url: "https://docs.example.com/runbooks/redis-exporter-down"
+
+      # Redis instance not responding (from exporter metric)
+      - alert: RedisInstanceDown
+        expr: redis_up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: redis
+        annotations:
+          summary: "Redis instance is down ({{ $labels.instance }})"
+          description: >
+            redis_up == 0 for instance {{ $labels.instance }}.
+            Check redis-server and replica containers, Sentinel, and HAProxy.
+          runbook_url: "https://docs.example.com/runbooks/redis-instance-down"
+
+      # Memory pressure – uses maxmemory if set; otherwise relative to used
+      - alert: RedisHighMemoryUsage
+        expr: |
+          (
+            redis_memory_max_bytes{job="redis"} > 0
+            and (redis_memory_used_bytes{job="redis"} / redis_memory_max_bytes{job="redis"}) > 0.8
+          )
+          or (
+            redis_memory_max_bytes{job="redis"} == 0
+            and redis_memory_used_bytes{job="redis"} > 500000000
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: redis
+        annotations:
+          summary: "Redis memory usage is high ({{ $labels.instance }})"
+          description: >
+            Redis memory usage is above 80% of maxmemory (or >500MB when
+            maxmemory is not configured).
+            Consider eviction settings, key TTLs, or increasing memory.
+          runbook_url: "https://docs.example.com/runbooks/redis-high-memory-usage"
+
+      # Command throughput spike
+      - alert: RedisHighCommandRate
+        expr: rate(redis_commands_processed_total{job="redis"}[5m]) > 5000
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: redis
+        annotations:
+          summary: "Redis command rate is high ({{ $labels.instance }})"
+          description: >
+            Redis commands/sec is above 5000 on {{ $labels.instance }}.
+            Validate whether this is expected load or a runaway client.
+          runbook_url: "https://docs.example.com/runbooks/redis-high-command-rate"
+
+  # ========================================
+  # HAProxy: availability & 5xx errors
+  # ========================================
+  - name: yelb-haproxy
+    rules:
+      # HAProxy targets not scraped
+      - alert: HAProxyTargetDown
+        expr: up{job="haproxy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: yelb
+          component: haproxy
+        annotations:
+          summary: "HAProxy target is down ({{ $labels.instance }})"
+          description: >
+            Prometheus cannot scrape the HAProxy metrics endpoint for
+            {{ $labels.instance }} (job=haproxy).
+            Check pg-haproxy and redis-haproxy containers and network.
+          runbook_url: "https://docs.example.com/runbooks/haproxy-target-down"
+
+      # Backend 5xx spikes – any proxy
+      - alert: HAProxyHigh5xxRate
+        expr: sum(rate(haproxy_server_http_responses_total{job="haproxy",code="5xx"}[5m])) by (proxy) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: haproxy
+        annotations:
+          summary: "HAProxy backend 5xx responses elevated ({{ $labels.proxy }})"
+          description: >
+            HAProxy backend 5xx response rate for proxy {{ $labels.proxy }}
+            exceeds 1 req/s over the last 5 minutes.
+            Check upstream services (Postgres, Redis, yelb-appserver) and logs.
+          runbook_url: "https://docs.example.com/runbooks/haproxy-high-5xx-rate"
+
+      # Optional: high frontend HTTP request rate (capacity signal)
+      - alert: HAProxyHighHttpRequestRate
+        expr: sum(rate(haproxy_frontend_http_requests_total{job="haproxy"}[5m])) by (proxy) > 200
+        for: 5m
+        labels:
+          severity: warning
+          service: yelb
+          component: haproxy
+        annotations:
+          summary: "HAProxy frontend request rate is high ({{ $labels.proxy }})"
+          description: >
+            HAProxy frontend request rate for proxy {{ $labels.proxy }}
+            is above 200 req/s. Validate capacity and scaling plans.
+          runbook_url: "https://docs.example.com/runbooks/haproxy-high-http-request-rate"
