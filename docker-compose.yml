@@ -12,7 +12,10 @@ services:
     depends_on:
       - yelb-appserver
     networks:
-      - yelbnet
+      yelbnet:
+      observability-net:
+        aliases:
+          - foodpulse-ui
     restart: always
 
   yelb-appserver:
@@ -347,6 +350,9 @@ services:
 networks:
   yelbnet:
     driver: bridge
+  observability-net:
+    name: observability-net
+    external: true
 
 # -------------------------
 # Volumes
