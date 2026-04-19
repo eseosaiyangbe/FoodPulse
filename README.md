@@ -59,6 +59,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
+The `yelb-appserver` service is intentionally built from the vendored local source in `yelb/yelb-appserver`.
+That keeps the running appserver aligned with this repo's database contract instead of relying on an external image that may carry stale upstream assumptions.
+
 After startup, useful checks include:
 
 ```bash
@@ -86,6 +89,7 @@ Start from:
 Important variables include:
 
 - `YELB_DB_SERVER`
+- `YELB_DB_NAME`
 - `YELB_REDIS_SERVER`
 - `YELB_REDIS_PASSWORD`
 - `YELB_DB_USER`

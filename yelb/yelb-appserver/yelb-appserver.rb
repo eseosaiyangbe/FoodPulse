@@ -91,6 +91,9 @@ end
 $yelbdbhost = settings.yelbdbhost
 $yelbdbport = settings.yelbdbport
 $redishost  = settings.redishost
+$yelbdbname = ENV.fetch('YELB_DB_NAME', 'yelbdatabase')
+$yelbdbuser = ENV.fetch('YELB_DB_USER', 'yelb')
+$yelbdbpassword = ENV.fetch('YELB_DB_PASSWORD', 'change-me')
 
 # Optional Redis AUTH support – used when requirepass/masterauth are enabled
 $redispassword = ENV['YELB_REDIS_PASSWORD']

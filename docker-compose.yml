@@ -20,13 +20,18 @@ services:
 
   yelb-appserver:
     platform: linux/amd64
-    image: eseosaiyangbe/yelb-appserver:v2
+    build:
+      context: ./yelb/yelb-appserver
+    image: foodpulse-yelb-appserver:local
     container_name: foodpulse-yelb-appserver
     depends_on:
       - pg-haproxy
       - redis-haproxy
     environment:
       - YELB_DB_SERVER=${YELB_DB_SERVER}
+      - YELB_DB_NAME=${YELB_DB_NAME:-yelbdatabase}
+      - YELB_DB_USER=${YELB_DB_USER}
+      - YELB_DB_PASSWORD=${YELB_DB_PASSWORD}
       - YELB_REDIS_SERVER=${YELB_REDIS_SERVER}
       - YELB_REDIS_PASSWORD=${YELB_REDIS_PASSWORD}
     networks:
