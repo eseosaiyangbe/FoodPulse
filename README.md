@@ -30,7 +30,7 @@ The stack includes:
 The repo is organized around a simple rule:
 
 - `yelb/` contains the vendored upstream application source
-- root-level folders like `haproxy/`, `scripts/`, `redis/`, `postgres/`, and `yelb-db/` contain workspace-specific platform glue
+- root-level folders like `haproxy/`, `scripts/`, `redis/`, and `postgres/` contain workspace-specific platform glue
 
 ## Workspace Integration
 
@@ -120,7 +120,7 @@ Those defaults are reflected in `.env.example` so the compose stack starts clean
 Recent cleanup intentionally removed a few confusing duplicates:
 
 - the canonical database bootstrap now comes from `yelb/yelb-db/init-yelb-db.sh`
-- the old root-level duplicate copy of that file is gone
+- workspace-specific replication bootstrap now lives under `postgres/initdb/`
 - the orphaned `ui/` scaffold was removed because it was not part of the running stack
 - the old in-repo observability stack was removed so the central `Obervability-Stack` is the only monitoring layer in the workspace
 

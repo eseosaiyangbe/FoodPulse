@@ -148,8 +148,8 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./yelb/yelb-db/init-yelb-db.sh:/docker-entrypoint-initdb.d/01-init-yelb-db.sh:ro
-      - ./yelb-db/02-create-replicator.sql:/docker-entrypoint-initdb.d/02-create-replicator.sql:ro
-      - ./yelb-db/03-pghba-override.sh:/docker-entrypoint-initdb.d/03-pghba-override.sh:ro
+      - ./postgres/initdb/02-create-replicator.sql:/docker-entrypoint-initdb.d/02-create-replicator.sql:ro
+      - ./postgres/initdb/03-pghba-override.sh:/docker-entrypoint-initdb.d/03-pghba-override.sh:ro
     networks:
       - yelbnet
     restart: always
