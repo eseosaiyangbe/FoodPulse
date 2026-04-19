@@ -5,6 +5,8 @@
 `FoodPulse` is a high-availability infrastructure lab built around the upstream `Yelb` application.
 
 It is not just a simple app clone.
+It is a workspace-owned wrapper around vendored upstream app code, with a local runtime contract that is intended to translate cleanly into Kubernetes later.
+
 It is a local playground for:
 
 - Redis replication and Sentinel failover
@@ -32,6 +34,11 @@ The stack includes:
 - Postgres exporter
 - Redis exporter
 
+The repo is organized around a simple rule:
+
+- `yelb/` contains the vendored upstream application source
+- root-level folders like `haproxy/`, `monitoring/`, `scripts/`, `redis/`, `postgres/`, and `yelb-db/` contain workspace-specific platform glue
+
 ## Workspace Integration
 
 This repo joins the shared Docker network:
@@ -56,11 +63,15 @@ From the repo root:
 
 ```bash
 cp .env.example .env
-docker compose up -d
+./scripts/start.sh
 ```
 
 The `yelb-appserver` service is intentionally built from the vendored local source in `yelb/yelb-appserver`.
 That keeps the running appserver aligned with this repo's database contract instead of relying on an external image that may carry stale upstream assumptions.
+
+Grafana dashboards are now provisioned from the canonical repo path:
+
+- `monitoring/grafana/dashboards`
 
 After startup, useful checks include:
 
@@ -68,6 +79,12 @@ After startup, useful checks include:
 ./scripts/cluster-status.sh
 ./scripts/redis-failover-drill.sh
 ./scripts/pg-failover-drill.sh
+```
+
+To stop the local stack:
+
+```bash
+./scripts/stop.sh
 ```
 
 ## Local URLs
@@ -116,6 +133,15 @@ Today the upstream Redis and replication lab configs still expect:
 - replication password: `replicatorpass`
 
 Those defaults are reflected in `.env.example` so the compose stack starts cleanly in this workspace.
+
+## Cleanup Notes
+
+Recent cleanup intentionally removed a few confusing duplicates:
+
+- the canonical database bootstrap now comes from `yelb/yelb-db/init-yelb-db.sh`
+- the old root-level duplicate copy of that file is gone
+- the orphaned `ui/` scaffold was removed because it was not part of the running stack
+- the Grafana dashboard JSON now lives under provisioned Grafana paths instead of an orphaned side folder
 
 ## Known Caveats
 

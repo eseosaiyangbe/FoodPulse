@@ -147,7 +147,7 @@ services:
       -c listen_addresses='*'
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./yelb-db/init-yelb-db.sh:/docker-entrypoint-initdb.d/01-init-yelb-db.sh:ro
+      - ./yelb/yelb-db/init-yelb-db.sh:/docker-entrypoint-initdb.d/01-init-yelb-db.sh:ro
       - ./yelb-db/02-create-replicator.sql:/docker-entrypoint-initdb.d/02-create-replicator.sql:ro
       - ./yelb-db/03-pghba-override.sh:/docker-entrypoint-initdb.d/03-pghba-override.sh:ro
     networks:
@@ -321,6 +321,8 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     networks:
       - yelbnet
     restart: always
