@@ -33,9 +33,9 @@ PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-db-replica2}"
 PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-db-replica3}"
 PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-foodpulse-pg-haproxy}"
 
-PG_USER="${FOODPULSE_DB_USER:-${YELB_DB_USER:-postgres}}"
-PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-${YELB_DB_PASSWORD:-postgres_password}}"
-PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-${YELB_DB_NAME:-foodpulse}}}"
+PG_USER="${FOODPULSE_DB_USER:-foodpulse}"
+PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-change-me}"
+PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-foodpulse}}"
 
 NETWORK_NAME="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "${PG_HAPROXY_CONTAINER}" 2>/dev/null || true)"
 

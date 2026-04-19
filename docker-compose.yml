@@ -1,18 +1,13 @@
-
 services:
-  # -------------------------
-  # FoodPulse frontend + appserver
-  # -------------------------
   foodpulse-ui:
-    platform: linux/amd64
     build:
-      context: ./yelb/yelb-ui
+      context: ./ui
     image: foodpulse-ui:local
     container_name: foodpulse-ui
     ports:
       - "127.0.0.1:${FOODPULSE_UI_HOST_PORT:-8090}:80"
     depends_on:
-      - foodpulse-appserver
+      - foodpulse-api
     networks:
       foodpulse-net:
       observability-net:
@@ -20,29 +15,32 @@ services:
           - foodpulse-ui
     restart: always
 
-  foodpulse-appserver:
+  foodpulse-api:
     build:
-      context: ./yelb/yelb-appserver
-    image: foodpulse-appserver:local
-    container_name: foodpulse-appserver
+      context: ./api
+    image: foodpulse-api:local
+    container_name: foodpulse-api
     depends_on:
       - pg-haproxy
       - redis-haproxy
     environment:
-      - FOODPULSE_DB_SERVER=${FOODPULSE_DB_SERVER:-foodpulse-db}
-      - FOODPULSE_DB_NAME=${FOODPULSE_DB_NAME:-foodpulse}
-      - FOODPULSE_DB_USER=${FOODPULSE_DB_USER:-foodpulse}
-      - FOODPULSE_DB_PASSWORD=${FOODPULSE_DB_PASSWORD:-change-me}
-      - FOODPULSE_REDIS_SERVER=${FOODPULSE_REDIS_SERVER:-redis-haproxy}
-      - FOODPULSE_REDIS_PASSWORD=${FOODPULSE_REDIS_PASSWORD:-admin}
+      FOODPULSE_DB_SERVER: ${FOODPULSE_DB_SERVER:-pg-haproxy}
+      FOODPULSE_DB_PORT: ${FOODPULSE_DB_PORT:-5432}
+      FOODPULSE_DB_NAME: ${FOODPULSE_DB_NAME:-foodpulse}
+      FOODPULSE_DB_USER: ${FOODPULSE_DB_USER:-foodpulse}
+      FOODPULSE_DB_PASSWORD: ${FOODPULSE_DB_PASSWORD:-change-me}
+      FOODPULSE_REDIS_SERVER: ${FOODPULSE_REDIS_SERVER:-redis-haproxy}
+      FOODPULSE_REDIS_PORT: ${FOODPULSE_REDIS_PORT:-6379}
+      FOODPULSE_REDIS_PASSWORD: ${FOODPULSE_REDIS_PASSWORD:-admin}
+      FOODPULSE_ALLOWED_ORIGIN: ${FOODPULSE_ALLOWED_ORIGIN:-http://localhost:8090}
+      PORT: 4567
+    ports:
+      - "127.0.0.1:${FOODPULSE_API_HOST_PORT:-3102}:4567"
     networks:
       - foodpulse-net
     restart: always
 
-  # ------------------------------
-  # Redis HA cluster (master + replicas)
-  # ------------------------------
-  redis-server:
+  redis-master:
     image: redis:7.2
     container_name: foodpulse-redis-master
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
@@ -53,7 +51,7 @@ services:
       - foodpulse-net
     restart: always
 
-  odilia-redis01:
+  redis-replica-1:
     image: redis:7.2
     container_name: foodpulse-redis-replica1
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
@@ -64,7 +62,7 @@ services:
       - foodpulse-net
     restart: always
 
-  odilia-redis02:
+  redis-replica-2:
     image: redis:7.2
     container_name: foodpulse-redis-replica2
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
@@ -75,63 +73,60 @@ services:
       - foodpulse-net
     restart: always
 
-  # -------------------------
-  # Redis Sentinels (3 nodes)
-  # -------------------------
-  odilia-redis-sentinel01:
+  redis-sentinel-1:
     image: redis:7.2
     container_name: foodpulse-redis-sentinel01
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-01.conf:/usr/local/etc/redis/sentinel.conf
     depends_on:
-      - redis-server
-      - odilia-redis01
-      - odilia-redis02
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
     networks:
       - foodpulse-net
     ports:
       - "127.0.0.1:${FOODPULSE_SENTINEL_HOST_PORT:-26380}:26379"
     restart: always
 
-  odilia-redis-sentinel02:
+  redis-sentinel-2:
     image: redis:7.2
     container_name: foodpulse-redis-sentinel02
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-02.conf:/usr/local/etc/redis/sentinel.conf
     depends_on:
-      - redis-server
-      - odilia-redis01
-      - odilia-redis02
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
     networks:
       - foodpulse-net
     restart: always
 
-  odilia-redis-sentinel03:
+  redis-sentinel-3:
     image: redis:7.2
     container_name: foodpulse-redis-sentinel03
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-03.conf:/usr/local/etc/redis/sentinel.conf
     depends_on:
-      - redis-server
-      - odilia-redis01
-      - odilia-redis02
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
     networks:
       - foodpulse-net
     restart: always
 
-  # ------------------------------
-  # FoodPulse DB (PRIMARY) - Postgres 14
-  # ------------------------------
   foodpulse-db:
     image: postgres:14
     container_name: foodpulse-db
     environment:
-      POSTGRES_USER: ${FOODPULSE_DB_USER:-foodpulse}
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${FOODPULSE_DB_PASSWORD:-change-me}
       POSTGRES_HOST_AUTH_METHOD: trust
+      FOODPULSE_DB_NAME: ${FOODPULSE_DB_NAME:-foodpulse}
+      FOODPULSE_DB_USER: ${FOODPULSE_DB_USER:-foodpulse}
+      FOODPULSE_DB_PASSWORD: ${FOODPULSE_DB_PASSWORD:-change-me}
     command: >
       postgres
       -c wal_level=replica
@@ -141,17 +136,14 @@ services:
       -c listen_addresses='*'
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./yelb/yelb-db/init-yelb-db.sh:/docker-entrypoint-initdb.d/01-init-yelb-db.sh:ro
+      - ./postgres/initdb/01-init-foodpulse.sh:/docker-entrypoint-initdb.d/01-init-foodpulse.sh:ro
       - ./postgres/initdb/02-create-replicator.sql:/docker-entrypoint-initdb.d/02-create-replicator.sql:ro
       - ./postgres/initdb/03-pghba-override.sh:/docker-entrypoint-initdb.d/03-pghba-override.sh:ro
     networks:
       - foodpulse-net
     restart: always
 
-  # ------------------------------------------
-  # Postgres streaming replicas
-  # ------------------------------------------
-  odilia-db-replication01:
+  postgres-replica-1:
     image: postgres:14
     container_name: foodpulse-db-replica1
     environment:
@@ -171,7 +163,7 @@ services:
           - foodpulse-db-replica1
     restart: always
 
-  odilia-db-replication02:
+  postgres-replica-2:
     image: postgres:14
     container_name: foodpulse-db-replica2
     environment:
@@ -191,7 +183,7 @@ services:
           - foodpulse-db-replica2
     restart: always
 
-  odilia-db-replication03:
+  postgres-replica-3:
     image: postgres:14
     container_name: foodpulse-db-replica3
     environment:
@@ -211,48 +203,38 @@ services:
           - foodpulse-db-replica3
     restart: always
 
-  # ------------------------------
-  # HAProxy for Postgres routing
-  # ------------------------------
   pg-haproxy:
     image: haproxy:2.9
     container_name: foodpulse-pg-haproxy
     depends_on:
       - foodpulse-db
-      - odilia-db-replication01
-      - odilia-db-replication02
-      - odilia-db-replication03
+      - postgres-replica-1
+      - postgres-replica-2
+      - postgres-replica-3
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "127.0.0.1:${FOODPULSE_PG_RW_HOST_PORT:-5442}:5432"   # RW pool
-      - "127.0.0.1:${FOODPULSE_PG_RO_HOST_PORT:-5443}:5433"   # RO pool
+      - "127.0.0.1:${FOODPULSE_PG_RW_HOST_PORT:-5442}:5432"
+      - "127.0.0.1:${FOODPULSE_PG_RO_HOST_PORT:-5443}:5433"
     networks:
       - foodpulse-net
     restart: always
 
-  # ------------------------------
-  # HAProxy for Redis routing
-  # ------------------------------
   redis-haproxy:
     image: haproxy:2.9
     container_name: foodpulse-redis-haproxy
     depends_on:
-      - redis-server
-      - odilia-redis01
-      - odilia-redis02
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2
     volumes:
       - ./haproxy/haproxy-redis.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "127.0.0.1:${FOODPULSE_REDIS_HOST_PORT:-6380}:6379"   # Redis entrypoint for app
+      - "127.0.0.1:${FOODPULSE_REDIS_HOST_PORT:-6380}:6379"
     networks:
       - foodpulse-net
     restart: always
 
-
-# -------------------------
-# Network
-# -------------------------
 networks:
   foodpulse-net:
     driver: bridge

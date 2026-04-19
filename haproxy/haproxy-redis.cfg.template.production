@@ -46,6 +46,6 @@ backend redis_master
   tcp-check send "INFO replication\r\n"
   tcp-check expect string "role:master"
 
-  server redis_server   redis-server:6379   check inter 2000 rise 1 fall 1
-  server redis_replica1 odilia-redis01:6379 check inter 2000 rise 1 fall 1
-  server redis_replica2 odilia-redis02:6379 check inter 2000 rise 1 fall 1
+  server redis_server   redis-master:6379 check inter 2000 rise 1 fall 1
+  server redis_replica1 redis-replica-1:6379 check inter 2000 rise 1 fall 1
+  server redis_replica2 redis-replica-2:6379 check inter 2000 rise 1 fall 1

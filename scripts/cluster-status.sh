@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cluster status dashboard for the FoodPulse HA stack
-# Redis + Postgres + HAProxy + App
+# Redis + Postgres + HAProxy + modern app
 # Exits non-zero if degraded.
 
 # Do NOT use -e; we want partial output even if some checks fail
@@ -48,13 +48,13 @@ REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-foodpulse-redis-replica2}"
 REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-foodpulse-redis-haproxy}"
 
 FOODPULSE_UI_CONTAINER="${FOODPULSE_UI_CONTAINER:-foodpulse-ui}"
-FOODPULSE_APP_CONTAINER="${FOODPULSE_APP_CONTAINER:-foodpulse-appserver}"
+FOODPULSE_APP_CONTAINER="${FOODPULSE_APP_CONTAINER:-foodpulse-api}"
 
-PG_USER="${FOODPULSE_DB_USER:-${YELB_DB_USER:-postgres}}"
-PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-${YELB_DB_PASSWORD:-admin}}"
-PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-${YELB_DB_NAME:-foodpulse}}}"
+PG_USER="${FOODPULSE_DB_USER:-foodpulse}"
+PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-change-me}"
+PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-foodpulse}}"
 
-REDIS_PASSWORD="${FOODPULSE_REDIS_PASSWORD:-${YELB_REDIS_PASSWORD:-admin}}"
+REDIS_PASSWORD="${FOODPULSE_REDIS_PASSWORD:-admin}"
 
 STATUS=0   # 0 = OK, 1 = degraded
 
@@ -254,16 +254,16 @@ else
     STATUS=1
   fi
 
-  # foodpulse-appserver via UI proxy: /api/getstats
+  # foodpulse-api via UI proxy: /api/getstats
   APP_STATS_URL="${APP_STATS_URL:-http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}/api/getstats}"
   APP_HTTP_CODE="$(
     curl --max-time 5 -s -o /dev/null -w "%{http_code}" "${APP_STATS_URL}" 2>/dev/null || echo "000"
   )"
 
   if [ "${APP_HTTP_CODE}" = "200" ]; then
-    echo "  foodpulse-appserver (via ${APP_STATS_URL}): OK (HTTP ${APP_HTTP_CODE})"
+    echo "  foodpulse-api (via ${APP_STATS_URL}): OK (HTTP ${APP_HTTP_CODE})"
   else
-    echo "  foodpulse-appserver (via ${APP_STATS_URL}): ERROR (HTTP ${APP_HTTP_CODE})"
+    echo "  foodpulse-api (via ${APP_STATS_URL}): ERROR (HTTP ${APP_HTTP_CODE})"
     STATUS=1
   fi
 fi

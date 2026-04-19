@@ -24,24 +24,15 @@ set -a
 source ./.env
 set +a
 
-: "${FOODPULSE_DB_SERVER:=${YELB_DB_SERVER:-pg-haproxy}}"
-: "${FOODPULSE_DB_NAME:=${YELB_DB_NAME:-foodpulse}}"
-: "${FOODPULSE_DB_USER:=${YELB_DB_USER:-foodpulse}}"
-: "${FOODPULSE_DB_PASSWORD:=${YELB_DB_PASSWORD:-change-me}}"
-: "${FOODPULSE_REDIS_SERVER:=${YELB_REDIS_SERVER:-redis-haproxy}}"
-: "${FOODPULSE_REDIS_PASSWORD:=${YELB_REDIS_PASSWORD:-admin}}"
-
-: "${YELB_DB_SERVER:=${FOODPULSE_DB_SERVER}}"
-: "${YELB_DB_NAME:=${FOODPULSE_DB_NAME}}"
-: "${YELB_DB_USER:=${FOODPULSE_DB_USER}}"
-: "${YELB_DB_PASSWORD:=${FOODPULSE_DB_PASSWORD}}"
-: "${YELB_REDIS_SERVER:=${FOODPULSE_REDIS_SERVER}}"
-: "${YELB_REDIS_PASSWORD:=${FOODPULSE_REDIS_PASSWORD}}"
+: "${FOODPULSE_DB_SERVER:=pg-haproxy}"
+: "${FOODPULSE_DB_NAME:=foodpulse}"
+: "${FOODPULSE_DB_USER:=foodpulse}"
+: "${FOODPULSE_DB_PASSWORD:=change-me}"
+: "${FOODPULSE_REDIS_SERVER:=redis-haproxy}"
+: "${FOODPULSE_REDIS_PASSWORD:=admin}"
 
 export FOODPULSE_DB_SERVER FOODPULSE_DB_NAME FOODPULSE_DB_USER FOODPULSE_DB_PASSWORD
 export FOODPULSE_REDIS_SERVER FOODPULSE_REDIS_PASSWORD
-export YELB_DB_SERVER YELB_DB_NAME YELB_DB_USER YELB_DB_PASSWORD
-export YELB_REDIS_SERVER YELB_REDIS_PASSWORD
 
 if ! docker network inspect observability-net >/dev/null 2>&1; then
   echo "Creating shared observability-net network..."
@@ -49,9 +40,7 @@ if ! docker network inspect observability-net >/dev/null 2>&1; then
 fi
 
 echo "Starting FoodPulse stack..."
-docker compose up -d --build --remove-orphans foodpulse-appserver foodpulse-ui
-docker compose up -d --remove-orphans --force-recreate foodpulse-ui
-docker compose up -d --remove-orphans
+docker compose up -d --build --remove-orphans
 
 echo "FoodPulse is starting."
 echo "App: http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}"

@@ -2,35 +2,36 @@
 
 ## What This Repo Is
 
-`FoodPulse` is a high-availability infrastructure lab built around a vendored upstream application that we are rebranding at the workspace runtime layer.
+`FoodPulse` is now a workspace-owned application and resiliency lab.
 
-It is not just a simple app clone.
-It is a workspace-owned wrapper around vendored upstream app code, with a local runtime contract that is intended to translate cleanly into Kubernetes later.
+We replaced the inherited legacy runtime with an owned stack:
 
-It is a local playground for:
+- a modern React UI in [ui](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/ui)
+- a Node/Express API in [api](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/api)
+- a Postgres primary/replica topology
+- Redis replication plus Sentinel failover
+- HAProxy routing for Postgres and Redis
 
-- Redis replication and Sentinel failover
-- Postgres primary/replica topology
-- HAProxy routing for database and cache access
-
-In the wider workspace, this repo plays the role of the **resilience and failover lab**.
+In the wider workspace, `FoodPulse` is still the **resilience and failover lab**, but it now has an app surface we control end to end.
 
 ## Main Runtime Shape
 
 The stack includes:
 
 - `foodpulse-ui`
-- `foodpulse-appserver`
+- `foodpulse-api`
 - Redis master plus replicas
 - Redis Sentinel nodes
 - Postgres primary plus replicas
 - HAProxy for Postgres
 - HAProxy for Redis
 
-The repo is organized around a simple rule:
+The repo layout is intentionally simple:
 
-- `yelb/` contains the vendored upstream application source
-- root-level folders like `haproxy/`, `scripts/`, `redis/`, and `postgres/` contain workspace-specific platform glue
+- [ui](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/ui) contains the modern frontend
+- [api](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/api) contains the modern backend
+- [postgres](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/postgres), [redis](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/redis), [sentinel](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/sentinel), and [haproxy](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/haproxy) contain the HA lab infrastructure
+- [scripts](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/scripts) contains operator workflows
 
 ## Workspace Integration
 
@@ -46,9 +47,9 @@ The user-facing app is exposed to the control plane with the alias:
 foodpulse-ui
 ```
 
-That alias matches the inventory in:
+That alias matches the inventory in the central observability stack.
 
-- `Obervability-Stack/ui-next/lib/monitored-apps.ts`
+Observability for this repo is handled by the central `Obervability-Stack`, not by a second monitoring stack inside `FoodPulse`.
 
 ## Local Start
 
@@ -59,14 +60,9 @@ cp .env.example .env
 ./scripts/start.sh
 ```
 
-The `foodpulse-appserver` and `foodpulse-ui` services are intentionally built from the vendored local source in `yelb/`.
-That keeps the running runtime aligned with this repo's database contract and branding layer instead of relying on stale upstream images.
-The appserver and data-plane services can now run natively on Apple Silicon and other multi-arch developer machines.
-The UI still uses a legacy Angular toolchain that depends on old x64-only PhantomJS binaries, so the `foodpulse-ui` image remains pinned to `linux/amd64` for now.
+If you are upgrading from an older local FoodPulse stack, run `docker compose down -v` once before the first modernized startup so the new app role and schema bootstrap can recreate cleanly.
 
-Observability for this repo is handled by the central `Obervability-Stack`, not by a second monitoring stack inside `FoodPulse`.
-
-After startup, useful checks include:
+Useful follow-up commands:
 
 ```bash
 ./scripts/cluster-status.sh
@@ -83,6 +79,9 @@ To stop the local stack:
 ## Local URLs
 
 - app: `http://localhost:8090`
+- API direct host port: `http://localhost:3102`
+- app health via UI proxy: `http://localhost:8090/health`
+- app metrics via UI proxy: `http://localhost:8090/metrics`
 - control plane app view: `http://localhost:4000/apps`
 
 ## Environment Contract
@@ -91,18 +90,22 @@ This repo expects a root `.env` file.
 
 Start from:
 
-- `.env.example`
+- [.env.example](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/.env.example)
 
 Important variables include:
 
 - `FOODPULSE_DB_SERVER`
+- `FOODPULSE_DB_PORT`
 - `FOODPULSE_DB_NAME`
-- `FOODPULSE_REDIS_SERVER`
-- `FOODPULSE_REDIS_PASSWORD`
 - `FOODPULSE_DB_USER`
 - `FOODPULSE_DB_PASSWORD`
+- `FOODPULSE_REDIS_SERVER`
+- `FOODPULSE_REDIS_PORT`
+- `FOODPULSE_REDIS_PASSWORD`
+- `FOODPULSE_ALLOWED_ORIGIN`
 - `PG_REPLICATOR_PASSWORD`
 - `FOODPULSE_UI_HOST_PORT`
+- `FOODPULSE_API_HOST_PORT`
 - `FOODPULSE_SENTINEL_HOST_PORT`
 - `FOODPULSE_PG_RW_HOST_PORT`
 - `FOODPULSE_PG_RO_HOST_PORT`
@@ -110,28 +113,20 @@ Important variables include:
 
 The default host-port contract is intentionally normalized so this repo can run beside the workspace control plane without colliding with shared ports or generic container names.
 
-The canonical runtime env names are now the `FOODPULSE_*` variables above.
-The helper scripts still accept legacy `YELB_*` values as compatibility fallbacks so older local `.env` files do not break immediately.
+## Kubernetes Readiness
 
-Today the upstream Redis and replication lab configs still expect:
+The owned app surface is now structured to translate more cleanly into Kubernetes later:
 
-- Redis password: `admin`
-- replication password: `replicatorpass`
+- separate UI and API images
+- environment-driven runtime contracts
+- dedicated health endpoint
+- dedicated metrics endpoint
+- stateful dependencies accessed through stable service names
 
-Those defaults are reflected in `.env.example` so the compose stack starts cleanly in this workspace.
-
-## Cleanup Notes
-
-Recent cleanup intentionally removed a few confusing duplicates:
-
-- the canonical database bootstrap now comes from `yelb/yelb-db/init-yelb-db.sh`
-- workspace-specific replication bootstrap now lives under `postgres/initdb/`
-- the orphaned `ui/` scaffold was removed because it was not part of the running stack
-- the old in-repo observability stack was removed so the central `Obervability-Stack` is the only monitoring layer in the workspace
+The HA lab still uses Docker Compose locally, but the application boundary is now much closer to a real cluster deployment model.
 
 ## Known Caveats
 
-- `command.sh` is a historical notes file, not the canonical startup path
 - `scripts/pg-failover-drill.sh` is intentionally a manual lab drill, not a production failover controller
-- this repo vendors the upstream `yelb/` app and wraps it in additional infrastructure
-- the workspace-facing runtime is rebranded to `FoodPulse`, but the vendored source tree still lives under `yelb/` until we intentionally do a full upstream fork
+- the Postgres and Redis HA topologies are educational and operator-friendly, not full self-healing platforms
+- the central control plane currently blackbox-checks the browser surface; it does not yet scrape the new API metrics endpoint directly
