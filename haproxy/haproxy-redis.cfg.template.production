@@ -1,0 +1,51 @@
+global
+    log stdout format raw local0
+    maxconn 4096
+    daemon
+    # Admin / runtime API socket in a writable dir
+    stats socket /tmp/redis-haproxy.sock mode 660 level admin
+    stats timeout 30s
+
+defaults
+    log     global
+    mode    tcp
+    option  tcplog
+    timeout connect 5s
+    timeout client  30s
+    timeout server  30s
+
+# Frontend: what clients (Yelb or others) connect to for Redis
+frontend redis_front
+    bind *:6379
+    mode tcp
+    default_backend redis_master
+
+# Admin / stats UI – HTTP mode is required for stats
+frontend admin
+    bind *:8404
+    mode http
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+
+# Backend: Redis nodes
+# Only the node responding "role:master" passes tcp-check and is treated as UP
+backend redis_master
+  mode tcp
+  option tcp-check
+
+  # 1) AUTH with the Redis password
+  tcp-check send "AUTH ${YELB_REDIS_PASSWORD}\r\n"
+  tcp-check expect string "+OK"
+
+  # 2) Check PING/PONG
+  tcp-check send "PING\r\n"
+  tcp-check expect string "+PONG"
+
+  # 3) Check that this node is the master
+  tcp-check send "INFO replication\r\n"
+  tcp-check expect string "role:master"
+
+  server redis_server   redis-server:6379   check inter 2000 rise 1 fall 1
+  server redis_replica1 odilia-redis01:6379 check inter 2000 rise 1 fall 1
+  server redis_replica2 odilia-redis02:6379 check inter 2000 rise 1 fall 1
