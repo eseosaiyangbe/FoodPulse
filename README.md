@@ -12,7 +12,6 @@ It is a local playground for:
 - Redis replication and Sentinel failover
 - Postgres primary/replica topology
 - HAProxy routing for database and cache access
-- Prometheus, Grafana, Alertmanager, and blackbox monitoring
 
 In the wider workspace, this repo plays the role of the **resilience and failover lab**.
 
@@ -27,17 +26,11 @@ The stack includes:
 - Postgres primary plus replicas
 - HAProxy for Postgres
 - HAProxy for Redis
-- Prometheus
-- Grafana
-- Alertmanager
-- blackbox-exporter
-- Postgres exporter
-- Redis exporter
 
 The repo is organized around a simple rule:
 
 - `yelb/` contains the vendored upstream application source
-- root-level folders like `haproxy/`, `monitoring/`, `scripts/`, `redis/`, `postgres/`, and `yelb-db/` contain workspace-specific platform glue
+- root-level folders like `haproxy/`, `scripts/`, `redis/`, `postgres/`, and `yelb-db/` contain workspace-specific platform glue
 
 ## Workspace Integration
 
@@ -69,9 +62,7 @@ cp .env.example .env
 The `yelb-appserver` service is intentionally built from the vendored local source in `yelb/yelb-appserver`.
 That keeps the running appserver aligned with this repo's database contract instead of relying on an external image that may carry stale upstream assumptions.
 
-Grafana dashboards are now provisioned from the canonical repo path:
-
-- `monitoring/grafana/dashboards`
+Observability for this repo is handled by the central `Obervability-Stack`, not by a second monitoring stack inside `FoodPulse`.
 
 After startup, useful checks include:
 
@@ -90,10 +81,7 @@ To stop the local stack:
 ## Local URLs
 
 - app: `http://localhost:8090`
-- Prometheus: `http://localhost:9095`
-- Grafana: `http://localhost:3010`
-- Alertmanager: `http://localhost:9096`
-- HAProxy stats: `http://localhost:8410/stats`
+- control plane app view: `http://localhost:4000/apps`
 
 ## Environment Contract
 
@@ -112,18 +100,11 @@ Important variables include:
 - `YELB_DB_USER`
 - `YELB_DB_PASSWORD`
 - `PG_REPLICATOR_PASSWORD`
-- `POSTGRES_EXPORTER_DSN`
-- `GF_ADMIN_USER`
-- `GF_ADMIN_PASSWORD`
 - `FOODPULSE_UI_HOST_PORT`
 - `FOODPULSE_SENTINEL_HOST_PORT`
 - `FOODPULSE_PG_RW_HOST_PORT`
 - `FOODPULSE_PG_RO_HOST_PORT`
-- `FOODPULSE_HAPROXY_STATS_HOST_PORT`
 - `FOODPULSE_REDIS_HOST_PORT`
-- `FOODPULSE_PROMETHEUS_HOST_PORT`
-- `FOODPULSE_GRAFANA_HOST_PORT`
-- `FOODPULSE_ALERTMANAGER_HOST_PORT`
 
 The default host-port contract is intentionally normalized so this repo can run beside the workspace control plane without colliding with shared ports or generic container names.
 
@@ -141,7 +122,7 @@ Recent cleanup intentionally removed a few confusing duplicates:
 - the canonical database bootstrap now comes from `yelb/yelb-db/init-yelb-db.sh`
 - the old root-level duplicate copy of that file is gone
 - the orphaned `ui/` scaffold was removed because it was not part of the running stack
-- the Grafana dashboard JSON now lives under provisioned Grafana paths instead of an orphaned side folder
+- the old in-repo observability stack was removed so the central `Obervability-Stack` is the only monitoring layer in the workspace
 
 ## Known Caveats
 

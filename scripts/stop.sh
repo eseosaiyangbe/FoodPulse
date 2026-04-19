@@ -14,4 +14,4 @@ export PATH="${HOME}/.local/bin:${HOME}/.docker/cli-plugins:${PATH}"
 cd "${REPO_ROOT}"
 
 echo "Stopping FoodPulse stack..."
-docker compose down
+docker compose down --remove-orphans

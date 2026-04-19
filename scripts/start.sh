@@ -25,8 +25,9 @@ if ! docker network inspect observability-net >/dev/null 2>&1; then
 fi
 
 echo "Starting FoodPulse stack..."
-docker compose up -d --build yelb-appserver
-docker compose up -d
+docker compose up -d --build --remove-orphans yelb-appserver
+docker compose up -d --remove-orphans --force-recreate yelb-ui
+docker compose up -d --remove-orphans
 
 echo "FoodPulse is starting."
 echo "App: http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}"
