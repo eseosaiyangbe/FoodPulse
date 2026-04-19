@@ -2,6 +2,14 @@
 # redis-failover-drill.sh
 set -u  # do NOT use -e; we want to see failures and keep going
 
+if [ -f "$HOME/.zprofile" ]; then
+  # The workstation bootstrap installs Docker in user-space locations on macOS.
+  # shellcheck source=/dev/null
+  . "$HOME/.zprofile" >/dev/null 2>&1 || true
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.docker/cli-plugins:$PATH"
+
 # ------------ Locate and load .env ------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Default: project-root/.env (one level up from scripts/)
@@ -18,10 +26,10 @@ else
 fi
 
 # ------------ Config ------------
-REDIS_MASTER_CONTAINER="redis-server"
-REDIS_REPLICA1_CONTAINER="odilia-redis01"
-REDIS_REPLICA2_CONTAINER="odilia-redis02"
-REDIS_HAPROXY_CONTAINER="redis-haproxy"
+REDIS_MASTER_CONTAINER="${REDIS_MASTER_CONTAINER:-foodpulse-redis-master}"
+REDIS_REPLICA1_CONTAINER="${REDIS_REPLICA1_CONTAINER:-foodpulse-redis-replica1}"
+REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-foodpulse-redis-replica2}"
+REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-foodpulse-redis-haproxy}"
 
 # Take from env if set, else default to 'admin'
 REDIS_PASSWORD="${YELB_REDIS_PASSWORD:-admin}"

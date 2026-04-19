@@ -55,6 +55,7 @@ That alias matches the inventory in:
 From the repo root:
 
 ```bash
+cp .env.example .env
 docker compose up -d
 ```
 
@@ -68,11 +69,11 @@ After startup, useful checks include:
 
 ## Local URLs
 
-- app: `http://localhost`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000`
-- Alertmanager: `http://localhost:9093`
-- HAProxy stats: `http://localhost:8404`
+- app: `http://localhost:8090`
+- Prometheus: `http://localhost:9095`
+- Grafana: `http://localhost:3010`
+- Alertmanager: `http://localhost:9096`
+- HAProxy stats: `http://localhost:8410/stats`
 
 ## Environment Contract
 
@@ -93,6 +94,24 @@ Important variables include:
 - `POSTGRES_EXPORTER_DSN`
 - `GF_ADMIN_USER`
 - `GF_ADMIN_PASSWORD`
+- `FOODPULSE_UI_HOST_PORT`
+- `FOODPULSE_SENTINEL_HOST_PORT`
+- `FOODPULSE_PG_RW_HOST_PORT`
+- `FOODPULSE_PG_RO_HOST_PORT`
+- `FOODPULSE_HAPROXY_STATS_HOST_PORT`
+- `FOODPULSE_REDIS_HOST_PORT`
+- `FOODPULSE_PROMETHEUS_HOST_PORT`
+- `FOODPULSE_GRAFANA_HOST_PORT`
+- `FOODPULSE_ALERTMANAGER_HOST_PORT`
+
+The default host-port contract is intentionally normalized so this repo can run beside the workspace control plane without colliding with shared ports or generic container names.
+
+Today the upstream Redis and replication lab configs still expect:
+
+- Redis password: `admin`
+- replication password: `replicatorpass`
+
+Those defaults are reflected in `.env.example` so the compose stack starts cleanly in this workspace.
 
 ## Known Caveats
 

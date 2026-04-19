@@ -6,9 +6,9 @@ services:
   yelb-ui:
     platform: linux/amd64
     image: mreferre/yelb-ui:0.7
-    container_name: yelb-ui
+    container_name: foodpulse-yelb-ui
     ports:
-      - "80:80"
+      - "127.0.0.1:${FOODPULSE_UI_HOST_PORT:-8090}:80"
     depends_on:
       - yelb-appserver
     networks:
@@ -21,7 +21,7 @@ services:
   yelb-appserver:
     platform: linux/amd64
     image: eseosaiyangbe/yelb-appserver:v2
-    container_name: yelb-appserver
+    container_name: foodpulse-yelb-appserver
     depends_on:
       - pg-haproxy
       - redis-haproxy
@@ -39,7 +39,7 @@ services:
   redis-server:
     platform: linux/amd64
     image: redis:7.2
-    container_name: redis-server
+    container_name: foodpulse-redis-master
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
       - redis-master-data:/data
@@ -51,7 +51,7 @@ services:
   odilia-redis01:
     platform: linux/amd64
     image: redis:7.2
-    container_name: odilia-redis01
+    container_name: foodpulse-redis-replica1
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
       - redis-replica-data:/data
@@ -63,7 +63,7 @@ services:
   odilia-redis02:
     platform: linux/amd64
     image: redis:7.2
-    container_name: odilia-redis02
+    container_name: foodpulse-redis-replica2
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
       - redis-replica2-data:/data
@@ -78,7 +78,7 @@ services:
   odilia-redis-sentinel01:
     platform: linux/amd64
     image: redis:7.2
-    container_name: odilia-redis-sentinel01
+    container_name: foodpulse-redis-sentinel01
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-01.conf:/usr/local/etc/redis/sentinel.conf
@@ -89,13 +89,13 @@ services:
     networks:
       - yelbnet
     ports:
-      - "26379:26379"
+      - "127.0.0.1:${FOODPULSE_SENTINEL_HOST_PORT:-26380}:26379"
     restart: always
 
   odilia-redis-sentinel02:
     platform: linux/amd64
     image: redis:7.2
-    container_name: odilia-redis-sentinel02
+    container_name: foodpulse-redis-sentinel02
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-02.conf:/usr/local/etc/redis/sentinel.conf
@@ -110,7 +110,7 @@ services:
   odilia-redis-sentinel03:
     platform: linux/amd64
     image: redis:7.2
-    container_name: odilia-redis-sentinel03
+    container_name: foodpulse-redis-sentinel03
     command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
     volumes:
       - ./sentinel/sentinel-03.conf:/usr/local/etc/redis/sentinel.conf
@@ -128,7 +128,7 @@ services:
   yelb-db:
     platform: linux/amd64
     image: postgres:14
-    container_name: yelb-db
+    container_name: foodpulse-yelb-db
     environment:
       POSTGRES_USER: ${YELB_DB_USER}
       POSTGRES_PASSWORD: ${YELB_DB_PASSWORD}
@@ -155,7 +155,7 @@ services:
   odilia-db-replication01:
     platform: linux/amd64
     image: postgres:14
-    container_name: yelb-db-replica1
+    container_name: foodpulse-yelb-db-replica1
     environment:
       POSTGRES_USER: ${YELB_DB_USER}
       POSTGRES_PASSWORD: ${YELB_DB_PASSWORD}
@@ -168,13 +168,15 @@ services:
       - db-data1:/var/lib/postgresql/data
       - ./postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
     networks:
-      - yelbnet
+      yelbnet:
+        aliases:
+          - yelb-db-replica1
     restart: always
 
   odilia-db-replication02:
     platform: linux/amd64
     image: postgres:14
-    container_name: yelb-db-replica2
+    container_name: foodpulse-yelb-db-replica2
     environment:
       POSTGRES_USER: ${YELB_DB_USER}
       POSTGRES_PASSWORD: ${YELB_DB_PASSWORD}
@@ -187,13 +189,15 @@ services:
       - db-data2:/var/lib/postgresql/data
       - ./postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
     networks:
-      - yelbnet
+      yelbnet:
+        aliases:
+          - yelb-db-replica2
     restart: always
 
   odilia-db-replication03:
     platform: linux/amd64
     image: postgres:14
-    container_name: yelb-db-replica3
+    container_name: foodpulse-yelb-db-replica3
     environment:
       POSTGRES_USER: ${YELB_DB_USER}
       POSTGRES_PASSWORD: ${YELB_DB_PASSWORD}
@@ -206,7 +210,9 @@ services:
       - db-data3:/var/lib/postgresql/data
       - ./postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
     networks:
-      - yelbnet
+      yelbnet:
+        aliases:
+          - yelb-db-replica3
     restart: always
 
   # ------------------------------
@@ -215,7 +221,7 @@ services:
   pg-haproxy:
     platform: linux/amd64
     image: haproxy:2.9
-    container_name: pg-haproxy
+    container_name: foodpulse-pg-haproxy
     depends_on:
       - yelb-db
       - odilia-db-replication01
@@ -224,9 +230,9 @@ services:
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "5432:5432"   # RW pool
-      - "5433:5433"   # RO pool
-      - "8404:8404"   # HAProxy stats UI
+      - "127.0.0.1:${FOODPULSE_PG_RW_HOST_PORT:-5442}:5432"   # RW pool
+      - "127.0.0.1:${FOODPULSE_PG_RO_HOST_PORT:-5443}:5433"   # RO pool
+      - "127.0.0.1:${FOODPULSE_HAPROXY_STATS_HOST_PORT:-8410}:8404"   # HAProxy stats UI
     networks:
       - yelbnet
     restart: always
@@ -237,7 +243,7 @@ services:
   redis-haproxy:
     platform: linux/amd64
     image: haproxy:2.9
-    container_name: redis-haproxy
+    container_name: foodpulse-redis-haproxy
     depends_on:
       - redis-server
       - odilia-redis01
@@ -245,7 +251,7 @@ services:
     volumes:
       - ./haproxy/haproxy-redis.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "6379:6379"   # Redis entrypoint for app
+      - "127.0.0.1:${FOODPULSE_REDIS_HOST_PORT:-6380}:6379"   # Redis entrypoint for app
       # 8404/8405 are internal-only (Prometheus + stats)
     networks:
       - yelbnet
@@ -257,7 +263,7 @@ services:
   postgres-exporter:
     platform: linux/amd64
     image: quay.io/prometheuscommunity/postgres-exporter
-    container_name: postgres-exporter
+    container_name: foodpulse-postgres-exporter
     environment:
       - DATA_SOURCE_NAME=${POSTGRES_EXPORTER_DSN}
     networks:
@@ -267,7 +273,7 @@ services:
   redis-exporter:
     platform: linux/amd64
     image: oliver006/redis_exporter:v1.61.0
-    container_name: redis-exporter
+    container_name: foodpulse-redis-exporter
     environment:
       - REDIS_ADDR=redis-haproxy:6379
       - REDIS_PASSWORD=${YELB_REDIS_PASSWORD}
@@ -281,7 +287,7 @@ services:
   prometheus:
     platform: linux/amd64
     image: prom/prometheus:v2.55.0
-    container_name: prometheus
+    container_name: foodpulse-prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
@@ -290,7 +296,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-lifecycle"
     ports:
-      - "9090:9090"
+      - "127.0.0.1:${FOODPULSE_PROMETHEUS_HOST_PORT:-9095}:9090"
     networks:
       - yelbnet
     restart: always
@@ -301,9 +307,9 @@ services:
   grafana:
     platform: linux/amd64
     image: grafana/grafana:11.0.0
-    container_name: grafana
+    container_name: foodpulse-grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FOODPULSE_GRAFANA_HOST_PORT:-3010}:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD}
@@ -320,7 +326,7 @@ services:
   blackbox-exporter:
     platform: linux/amd64
     image: prom/blackbox-exporter:v0.25.0
-    container_name: blackbox-exporter
+    container_name: foodpulse-blackbox-exporter
     command:
       - "--config.file=/etc/blackbox/blackbox.yml"
     volumes:
@@ -332,13 +338,13 @@ services:
   alertmanager:
     platform: linux/amd64
     image: prom/alertmanager:v0.27.0
-    container_name: alertmanager
+    container_name: foodpulse-alertmanager
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
     ports:
-      - "9093:9093"   # Alertmanager UI / API
+      - "127.0.0.1:${FOODPULSE_ALERTMANAGER_HOST_PORT:-9096}:9093"   # Alertmanager UI / API
     networks:
       - yelbnet
     restart: always

@@ -6,6 +6,14 @@
 # Do NOT use -e; we want partial output even if some checks fail
 set -u
 
+if [ -f "$HOME/.zprofile" ]; then
+  # The workstation bootstrap installs Docker in user-space locations on macOS.
+  # shellcheck source=/dev/null
+  . "$HOME/.zprofile" >/dev/null 2>&1 || true
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.docker/cli-plugins:$PATH"
+
 echo "DEBUG: script start"
 
 # Global DB connect timeout for psql (seconds)
@@ -28,23 +36,23 @@ fi
 echo "DEBUG: after env load"
 
 # ------------ Config (with safe defaults) ------------
-PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-yelb-db}"
-PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-yelb-db-replica1}"
-PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-yelb-db-replica2}"
-PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-yelb-db-replica3}"
-PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-pg-haproxy}"
+PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-yelb-db}"
+PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-yelb-db-replica1}"
+PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-yelb-db-replica2}"
+PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-yelb-db-replica3}"
+PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-foodpulse-pg-haproxy}"
 
-REDIS_MASTER_CONTAINER="${REDIS_MASTER_CONTAINER:-redis-server}"
-REDIS_REPLICA1_CONTAINER="${REDIS_REPLICA1_CONTAINER:-odilia-redis01}"
-REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-odilia-redis02}"
-REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-redis-haproxy}"
+REDIS_MASTER_CONTAINER="${REDIS_MASTER_CONTAINER:-foodpulse-redis-master}"
+REDIS_REPLICA1_CONTAINER="${REDIS_REPLICA1_CONTAINER:-foodpulse-redis-replica1}"
+REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-foodpulse-redis-replica2}"
+REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-foodpulse-redis-haproxy}"
 
-YELB_UI_CONTAINER="${YELB_UI_CONTAINER:-yelb-ui}"
-YELB_APP_CONTAINER="${YELB_APP_CONTAINER:-yelb-appserver}"
+YELB_UI_CONTAINER="${YELB_UI_CONTAINER:-foodpulse-yelb-ui}"
+YELB_APP_CONTAINER="${YELB_APP_CONTAINER:-foodpulse-yelb-appserver}"
 
 PG_USER="${YELB_DB_USER:-postgres}"
 PG_PASSWORD="${YELB_DB_PASSWORD:-admin}"
-PG_DB="${PG_DB:-postgres}"
+PG_DB="${PG_DB:-yelbdatabase}"
 
 REDIS_PASSWORD="${YELB_REDIS_PASSWORD:-admin}"
 
@@ -234,7 +242,7 @@ if ! command -v curl >/dev/null 2>&1; then
   STATUS=1
 else
   # yelb-ui via host (nginx on port 80)
-  UI_URL="${UI_URL:-http://localhost/}"
+  UI_URL="${UI_URL:-http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}/}"
   UI_HTTP_CODE="$(
     curl --max-time 5 -s -o /dev/null -w "%{http_code}" "${UI_URL}" 2>/dev/null || echo "000"
   )"
@@ -247,7 +255,7 @@ else
   fi
 
   # yelb-appserver via UI proxy: /api/getstats
-  APP_STATS_URL="${APP_STATS_URL:-http://localhost/api/getstats}"
+  APP_STATS_URL="${APP_STATS_URL:-http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}/api/getstats}"
   APP_HTTP_CODE="$(
     curl --max-time 5 -s -o /dev/null -w "%{http_code}" "${APP_STATS_URL}" 2>/dev/null || echo "000"
   )"

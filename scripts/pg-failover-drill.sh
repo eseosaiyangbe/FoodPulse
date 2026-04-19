@@ -6,6 +6,14 @@
 
 set -u
 
+if [ -f "$HOME/.zprofile" ]; then
+  # The workstation bootstrap installs Docker in user-space locations on macOS.
+  # shellcheck source=/dev/null
+  . "$HOME/.zprofile" >/dev/null 2>&1 || true
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.docker/cli-plugins:$PATH"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-${SCRIPT_DIR}/../.env}"
 
@@ -19,15 +27,15 @@ else
   echo "WARN: ${ENV_FILE} not found, falling back to defaults."
 fi
 
-PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-yelb-db}"
-PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-yelb-db-replica1}"
-PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-yelb-db-replica2}"
-PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-yelb-db-replica3}"
-PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-pg-haproxy}"
+PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-yelb-db}"
+PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-yelb-db-replica1}"
+PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-yelb-db-replica2}"
+PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-yelb-db-replica3}"
+PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-foodpulse-pg-haproxy}"
 
 PG_USER="${YELB_DB_USER:-postgres}"
 PG_PASSWORD="${YELB_DB_PASSWORD:-postgres_password}"
-PG_DB="${PG_DB:-postgres}"
+PG_DB="${PG_DB:-yelbdatabase}"
 
 NETWORK_NAME="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "${PG_HAPROXY_CONTAINER}" 2>/dev/null || true)"
 
