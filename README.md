@@ -96,6 +96,6 @@ Important variables include:
 
 ## Known Caveats
 
-- `command.sh` is a historical notes/scratch file, not the canonical startup path
-- `scripts/pg-failover-drill.sh` should be reviewed carefully before treating it as a production-quality drill script
+- `command.sh` is a historical notes file, not the canonical startup path
+- `scripts/pg-failover-drill.sh` is intentionally a manual lab drill, not a production failover controller
 - this repo vendors the upstream `yelb/` app and wraps it in additional infrastructure
