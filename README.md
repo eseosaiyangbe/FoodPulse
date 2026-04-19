@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-`FoodPulse` is a high-availability infrastructure lab built around the upstream `Yelb` application.
+`FoodPulse` is a high-availability infrastructure lab built around a vendored upstream application that we are rebranding at the workspace runtime layer.
 
 It is not just a simple app clone.
 It is a workspace-owned wrapper around vendored upstream app code, with a local runtime contract that is intended to translate cleanly into Kubernetes later.
@@ -19,8 +19,8 @@ In the wider workspace, this repo plays the role of the **resilience and failove
 
 The stack includes:
 
-- `yelb-ui`
-- `yelb-appserver`
+- `foodpulse-ui`
+- `foodpulse-appserver`
 - Redis master plus replicas
 - Redis Sentinel nodes
 - Postgres primary plus replicas
@@ -59,8 +59,10 @@ cp .env.example .env
 ./scripts/start.sh
 ```
 
-The `yelb-appserver` service is intentionally built from the vendored local source in `yelb/yelb-appserver`.
-That keeps the running appserver aligned with this repo's database contract instead of relying on an external image that may carry stale upstream assumptions.
+The `foodpulse-appserver` and `foodpulse-ui` services are intentionally built from the vendored local source in `yelb/`.
+That keeps the running runtime aligned with this repo's database contract and branding layer instead of relying on stale upstream images.
+The appserver and data-plane services can now run natively on Apple Silicon and other multi-arch developer machines.
+The UI still uses a legacy Angular toolchain that depends on old x64-only PhantomJS binaries, so the `foodpulse-ui` image remains pinned to `linux/amd64` for now.
 
 Observability for this repo is handled by the central `Obervability-Stack`, not by a second monitoring stack inside `FoodPulse`.
 
@@ -93,12 +95,12 @@ Start from:
 
 Important variables include:
 
-- `YELB_DB_SERVER`
-- `YELB_DB_NAME`
-- `YELB_REDIS_SERVER`
-- `YELB_REDIS_PASSWORD`
-- `YELB_DB_USER`
-- `YELB_DB_PASSWORD`
+- `FOODPULSE_DB_SERVER`
+- `FOODPULSE_DB_NAME`
+- `FOODPULSE_REDIS_SERVER`
+- `FOODPULSE_REDIS_PASSWORD`
+- `FOODPULSE_DB_USER`
+- `FOODPULSE_DB_PASSWORD`
 - `PG_REPLICATOR_PASSWORD`
 - `FOODPULSE_UI_HOST_PORT`
 - `FOODPULSE_SENTINEL_HOST_PORT`
@@ -107,6 +109,9 @@ Important variables include:
 - `FOODPULSE_REDIS_HOST_PORT`
 
 The default host-port contract is intentionally normalized so this repo can run beside the workspace control plane without colliding with shared ports or generic container names.
+
+The canonical runtime env names are now the `FOODPULSE_*` variables above.
+The helper scripts still accept legacy `YELB_*` values as compatibility fallbacks so older local `.env` files do not break immediately.
 
 Today the upstream Redis and replication lab configs still expect:
 
@@ -129,3 +134,4 @@ Recent cleanup intentionally removed a few confusing duplicates:
 - `command.sh` is a historical notes file, not the canonical startup path
 - `scripts/pg-failover-drill.sh` is intentionally a manual lab drill, not a production failover controller
 - this repo vendors the upstream `yelb/` app and wraps it in additional infrastructure
+- the workspace-facing runtime is rebranded to `FoodPulse`, but the vendored source tree still lives under `yelb/` until we intentionally do a full upstream fork

@@ -27,15 +27,15 @@ else
   echo "WARN: ${ENV_FILE} not found, falling back to defaults."
 fi
 
-PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-yelb-db}"
-PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-yelb-db-replica1}"
-PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-yelb-db-replica2}"
-PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-yelb-db-replica3}"
+PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-db}"
+PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-db-replica1}"
+PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-db-replica2}"
+PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-db-replica3}"
 PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-foodpulse-pg-haproxy}"
 
-PG_USER="${YELB_DB_USER:-postgres}"
-PG_PASSWORD="${YELB_DB_PASSWORD:-postgres_password}"
-PG_DB="${PG_DB:-yelbdatabase}"
+PG_USER="${FOODPULSE_DB_USER:-${YELB_DB_USER:-postgres}}"
+PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-${YELB_DB_PASSWORD:-postgres_password}}"
+PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-${YELB_DB_NAME:-foodpulse}}}"
 
 NETWORK_NAME="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "${PG_HAPROXY_CONTAINER}" 2>/dev/null || true)"
 
@@ -207,8 +207,8 @@ cat <<'EOF'
 
 NOTE:
 - This drill shows connectivity and manual promotion only.
-- After promoting yelb-db-replica1, your replication topology is no longer clean:
-  * The old primary (yelb-db) is now an independent Postgres instance.
+- After promoting foodpulse-db-replica1, your replication topology is no longer clean:
+  * The old primary (foodpulse-db) is now an independent Postgres instance.
   * Other replicas may still be following the old primary or be out-of-date.
 - In a real production environment you would use a proper HA stack
   (Patroni, repmgr, Stolon, etc.) to:

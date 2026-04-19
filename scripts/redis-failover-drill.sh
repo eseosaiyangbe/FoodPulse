@@ -32,7 +32,7 @@ REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-foodpulse-redis-replica2}"
 REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-foodpulse-redis-haproxy}"
 
 # Take from env if set, else default to 'admin'
-REDIS_PASSWORD="${YELB_REDIS_PASSWORD:-admin}"
+REDIS_PASSWORD="${FOODPULSE_REDIS_PASSWORD:-${YELB_REDIS_PASSWORD:-admin}}"
 
 echo "=== REDIS FAILOVER DRILL ==="
 echo "Timestamp: $(date)"

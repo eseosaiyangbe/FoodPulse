@@ -1,12 +1,12 @@
 #################################################################################
 ####                           Massimo Re Ferre'                             ####
 ####                             www.it20.info                               ####
-####                    Yelb, a simple web application                       ####
+####                 FoodPulse, a simple web application                     ####
 ################################################################################# 
   
 #################################################################################
-####   yelb-appserver.rb is the app (ruby based) component of the Yelb app   ####
-####          Yelb connects to a backend database for persistency            ####
+#### yelb-appserver.rb powers the Ruby API component of the FoodPulse app    ####
+####     FoodPulse connects to a backend database for persistency            ####
 #################################################################################
 
 require 'sinatra'
@@ -30,48 +30,48 @@ disable :protection
 
 # ---------------------------------------------------------------------------
 # Environment-specific configuration
-# NOTE: these are updated to honor YELB_DB_SERVER / YELB_REDIS_SERVER
+# NOTE: these are updated to honor FOODPULSE_DB_SERVER / FOODPULSE_REDIS_SERVER
 #       so we can route through HAProxy (pg-haproxy, redis-haproxy).
 # ---------------------------------------------------------------------------
 
 configure :production do
-  set :redishost, ENV.fetch('YELB_REDIS_SERVER', 'redis-server')
+  set :redishost, ENV.fetch('FOODPULSE_REDIS_SERVER', ENV.fetch('YELB_REDIS_SERVER', 'redis-server'))
   set :port, 4567
-  set :yelbdbhost => ENV.fetch('YELB_DB_SERVER', 'yelb-db')
+  set :yelbdbhost => ENV.fetch('FOODPULSE_DB_SERVER', ENV.fetch('YELB_DB_SERVER', 'foodpulse-db'))
   set :yelbdbport => 5432
-  set :yelbddbrestaurants => ENV['YELB_DDB_RESTAURANTS']
-  set :yelbddbcache => ENV['YELB_DDB_CACHE']
+  set :yelbddbrestaurants => ENV['FOODPULSE_DDB_RESTAURANTS'] || ENV['YELB_DDB_RESTAURANTS']
+  set :yelbddbcache => ENV['FOODPULSE_DDB_CACHE'] || ENV['YELB_DDB_CACHE']
   set :awsregion => ENV['AWS_REGION']
 end
 
 configure :test do
-  set :redishost, ENV.fetch('YELB_REDIS_SERVER', 'redis-server')
+  set :redishost, ENV.fetch('FOODPULSE_REDIS_SERVER', ENV.fetch('YELB_REDIS_SERVER', 'redis-server'))
   set :port, 4567
-  set :yelbdbhost => ENV.fetch('YELB_DB_SERVER', 'yelb-db')
+  set :yelbdbhost => ENV.fetch('FOODPULSE_DB_SERVER', ENV.fetch('YELB_DB_SERVER', 'foodpulse-db'))
   set :yelbdbport => 5432
-  set :yelbddbrestaurants => ENV['YELB_DDB_RESTAURANTS']
-  set :yelbddbcache => ENV['YELB_DDB_CACHE']
+  set :yelbddbrestaurants => ENV['FOODPULSE_DDB_RESTAURANTS'] || ENV['YELB_DDB_RESTAURANTS']
+  set :yelbddbcache => ENV['FOODPULSE_DDB_CACHE'] || ENV['YELB_DDB_CACHE']
   set :awsregion => ENV['AWS_REGION']
 end
 
 configure :development do
-  set :redishost, ENV.fetch('YELB_REDIS_SERVER', 'localhost')
+  set :redishost, ENV.fetch('FOODPULSE_REDIS_SERVER', ENV.fetch('YELB_REDIS_SERVER', 'localhost'))
   set :port, 4567
-  set :yelbdbhost => ENV.fetch('YELB_DB_SERVER', 'localhost')
+  set :yelbdbhost => ENV.fetch('FOODPULSE_DB_SERVER', ENV.fetch('YELB_DB_SERVER', 'localhost'))
   set :yelbdbport => 5432
-  set :yelbddbrestaurants => ENV['YELB_DDB_RESTAURANTS']
-  set :yelbddbcache => ENV['YELB_DDB_CACHE']
+  set :yelbddbrestaurants => ENV['FOODPULSE_DDB_RESTAURANTS'] || ENV['YELB_DDB_RESTAURANTS']
+  set :yelbddbcache => ENV['FOODPULSE_DDB_CACHE'] || ENV['YELB_DDB_CACHE']
   set :awsregion => ENV['AWS_REGION']
 end
 
 configure :custom do
   # keep “custom” env semantics but align names with the rest
-  set :redishost, ENV['YELB_REDIS_SERVER'] || ENV['REDIS_SERVER_ENDPOINT']
+  set :redishost, ENV['FOODPULSE_REDIS_SERVER'] || ENV['YELB_REDIS_SERVER'] || ENV['REDIS_SERVER_ENDPOINT']
   set :port, 4567
-  set :yelbdbhost => (ENV['YELB_DB_SERVER'] || ENV['YELB_DB_SERVER_ENDPOINT'])
+  set :yelbdbhost => (ENV['FOODPULSE_DB_SERVER'] || ENV['YELB_DB_SERVER'] || ENV['FOODPULSE_DB_SERVER_ENDPOINT'] || ENV['YELB_DB_SERVER_ENDPOINT'])
   set :yelbdbport => 5432
-  set :yelbddbrestaurants => ENV['YELB_DDB_RESTAURANTS']
-  set :yelbddbcache => ENV['YELB_DDB_CACHE']
+  set :yelbddbrestaurants => ENV['FOODPULSE_DDB_RESTAURANTS'] || ENV['YELB_DDB_RESTAURANTS']
+  set :yelbddbcache => ENV['FOODPULSE_DDB_CACHE'] || ENV['YELB_DDB_CACHE']
   set :awsregion => ENV['AWS_REGION']
 end
 
@@ -91,12 +91,12 @@ end
 $yelbdbhost = settings.yelbdbhost
 $yelbdbport = settings.yelbdbport
 $redishost  = settings.redishost
-$yelbdbname = ENV.fetch('YELB_DB_NAME', 'yelbdatabase')
-$yelbdbuser = ENV.fetch('YELB_DB_USER', 'yelb')
-$yelbdbpassword = ENV.fetch('YELB_DB_PASSWORD', 'change-me')
+$yelbdbname = ENV.fetch('FOODPULSE_DB_NAME', ENV.fetch('YELB_DB_NAME', 'foodpulse'))
+$yelbdbuser = ENV.fetch('FOODPULSE_DB_USER', ENV.fetch('YELB_DB_USER', 'foodpulse'))
+$yelbdbpassword = ENV.fetch('FOODPULSE_DB_PASSWORD', ENV.fetch('YELB_DB_PASSWORD', 'change-me'))
 
 # Optional Redis AUTH support – used when requirepass/masterauth are enabled
-$redispassword = ENV['YELB_REDIS_PASSWORD']
+$redispassword = ENV['FOODPULSE_REDIS_PASSWORD'] || ENV['YELB_REDIS_PASSWORD']
 
 # the yelbddbcache, yelbdbrestaurants and the awsregion variables are only
 # intended to use in the serverless scenario (DDB)

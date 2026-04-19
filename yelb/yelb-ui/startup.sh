@@ -2,7 +2,9 @@
 NGINX_CONF=/etc/nginx/conf.d/default.conf
 cd clarity-seed
 
-if [ -z "$YELB_APPSERVER_ENDPOINT" ]; then YELB_APPSERVER_ENDPOINT="http://yelb-appserver:4567"; fi
+if [ -z "${FOODPULSE_APPSERVER_ENDPOINT:-}" ]; then
+    FOODPULSE_APPSERVER_ENDPOINT="${YELB_APPSERVER_ENDPOINT:-http://foodpulse-appserver:4567}"
+fi
 
 # when the variable is populated a search domain entry is added to resolv.conf at startup
 # this is needed for the ECS service discovery given the app works by calling host names and not FQDNs
@@ -17,7 +19,7 @@ sed -i -- 's#/usr/share/nginx/html#/clarity-seed/'$UI_ENV'/dist#g' $NGINX_CONF
 if ! grep -q "location /api" "$NGINX_CONF"; then
     eval "cat <<EOF
     location /api {
-        proxy_pass "$YELB_APPSERVER_ENDPOINT"/api;
+        proxy_pass "$FOODPULSE_APPSERVER_ENDPOINT"/api;
         proxy_http_version 1.1;
     }
     gzip on;
@@ -30,4 +32,3 @@ EOF
 fi
 
 nginx -g "daemon off;"
-

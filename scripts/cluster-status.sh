@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cluster status dashboard for Yelb-HA stack
+# Cluster status dashboard for the FoodPulse HA stack
 # Redis + Postgres + HAProxy + App
 # Exits non-zero if degraded.
 
@@ -36,10 +36,10 @@ fi
 echo "DEBUG: after env load"
 
 # ------------ Config (with safe defaults) ------------
-PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-yelb-db}"
-PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-yelb-db-replica1}"
-PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-yelb-db-replica2}"
-PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-yelb-db-replica3}"
+PG_PRIMARY_CONTAINER="${PG_PRIMARY_CONTAINER:-foodpulse-db}"
+PG_REPLICA1_CONTAINER="${PG_REPLICA1_CONTAINER:-foodpulse-db-replica1}"
+PG_REPLICA2_CONTAINER="${PG_REPLICA2_CONTAINER:-foodpulse-db-replica2}"
+PG_REPLICA3_CONTAINER="${PG_REPLICA3_CONTAINER:-foodpulse-db-replica3}"
 PG_HAPROXY_CONTAINER="${PG_HAPROXY_CONTAINER:-foodpulse-pg-haproxy}"
 
 REDIS_MASTER_CONTAINER="${REDIS_MASTER_CONTAINER:-foodpulse-redis-master}"
@@ -47,21 +47,21 @@ REDIS_REPLICA1_CONTAINER="${REDIS_REPLICA1_CONTAINER:-foodpulse-redis-replica1}"
 REDIS_REPLICA2_CONTAINER="${REDIS_REPLICA2_CONTAINER:-foodpulse-redis-replica2}"
 REDIS_HAPROXY_CONTAINER="${REDIS_HAPROXY_CONTAINER:-foodpulse-redis-haproxy}"
 
-YELB_UI_CONTAINER="${YELB_UI_CONTAINER:-foodpulse-yelb-ui}"
-YELB_APP_CONTAINER="${YELB_APP_CONTAINER:-foodpulse-yelb-appserver}"
+FOODPULSE_UI_CONTAINER="${FOODPULSE_UI_CONTAINER:-foodpulse-ui}"
+FOODPULSE_APP_CONTAINER="${FOODPULSE_APP_CONTAINER:-foodpulse-appserver}"
 
-PG_USER="${YELB_DB_USER:-postgres}"
-PG_PASSWORD="${YELB_DB_PASSWORD:-admin}"
-PG_DB="${PG_DB:-yelbdatabase}"
+PG_USER="${FOODPULSE_DB_USER:-${YELB_DB_USER:-postgres}}"
+PG_PASSWORD="${FOODPULSE_DB_PASSWORD:-${YELB_DB_PASSWORD:-admin}}"
+PG_DB="${PG_DB:-${FOODPULSE_DB_NAME:-${YELB_DB_NAME:-foodpulse}}}"
 
-REDIS_PASSWORD="${YELB_REDIS_PASSWORD:-admin}"
+REDIS_PASSWORD="${FOODPULSE_REDIS_PASSWORD:-${YELB_REDIS_PASSWORD:-admin}}"
 
 STATUS=0   # 0 = OK, 1 = degraded
 
 # Figure out the Docker network name attached to pg-haproxy
 NETWORK_NAME="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "${PG_HAPROXY_CONTAINER}" 2>/dev/null || true)"
 
-echo "=== CLUSTER STATUS (YELB HA) ==="
+echo "=== CLUSTER STATUS (FOODPULSE HA) ==="
 echo "Timestamp: $(date)"
 echo "Docker network: ${NETWORK_NAME:-UNKNOWN}"
 echo
@@ -241,29 +241,29 @@ if ! command -v curl >/dev/null 2>&1; then
   echo "  [ERROR] curl not found on host; cannot run HTTP checks."
   STATUS=1
 else
-  # yelb-ui via host (nginx on port 80)
+  # foodpulse-ui via host (nginx on port 80)
   UI_URL="${UI_URL:-http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}/}"
   UI_HTTP_CODE="$(
     curl --max-time 5 -s -o /dev/null -w "%{http_code}" "${UI_URL}" 2>/dev/null || echo "000"
   )"
 
   if [ "${UI_HTTP_CODE}" = "200" ]; then
-    echo "  yelb-ui (${UI_URL}): OK (HTTP ${UI_HTTP_CODE})"
+    echo "  foodpulse-ui (${UI_URL}): OK (HTTP ${UI_HTTP_CODE})"
   else
-    echo "  yelb-ui (${UI_URL}): ERROR (HTTP ${UI_HTTP_CODE})"
+    echo "  foodpulse-ui (${UI_URL}): ERROR (HTTP ${UI_HTTP_CODE})"
     STATUS=1
   fi
 
-  # yelb-appserver via UI proxy: /api/getstats
+  # foodpulse-appserver via UI proxy: /api/getstats
   APP_STATS_URL="${APP_STATS_URL:-http://localhost:${FOODPULSE_UI_HOST_PORT:-8090}/api/getstats}"
   APP_HTTP_CODE="$(
     curl --max-time 5 -s -o /dev/null -w "%{http_code}" "${APP_STATS_URL}" 2>/dev/null || echo "000"
   )"
 
   if [ "${APP_HTTP_CODE}" = "200" ]; then
-    echo "  yelb-appserver (via ${APP_STATS_URL}): OK (HTTP ${APP_HTTP_CODE})"
+    echo "  foodpulse-appserver (via ${APP_STATS_URL}): OK (HTTP ${APP_HTTP_CODE})"
   else
-    echo "  yelb-appserver (via ${APP_STATS_URL}): ERROR (HTTP ${APP_HTTP_CODE})"
+    echo "  foodpulse-appserver (via ${APP_STATS_URL}): ERROR (HTTP ${APP_HTTP_CODE})"
     STATUS=1
   fi
 fi

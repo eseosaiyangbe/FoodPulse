@@ -4,7 +4,7 @@ set -e
 # Default PGDATA for official postgres image
 : "${PGDATA:=/var/lib/postgresql/data}"
 
-PRIMARY_HOST="yelb-db"
+PRIMARY_HOST="foodpulse-db"
 REPL_USER="replicator"
 
 echo "Replica starting with PGDATA=${PGDATA}"

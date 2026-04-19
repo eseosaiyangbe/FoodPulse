@@ -14,7 +14,7 @@ defaults
     timeout client  30s
     timeout server  30s
 
-# Frontend: what clients (Yelb or others) connect to for Redis
+# Frontend: what clients (FoodPulse or others) connect to for Redis
 frontend redis_front
     bind *:6379
     mode tcp
@@ -35,7 +35,7 @@ backend redis_master
   option tcp-check
 
   # 1) AUTH with the Redis password
-  tcp-check send "AUTH ${YELB_REDIS_PASSWORD}\r\n"
+  tcp-check send "AUTH ${FOODPULSE_REDIS_PASSWORD}\r\n"
   tcp-check expect string "+OK"
 
   # 2) Check PING/PONG

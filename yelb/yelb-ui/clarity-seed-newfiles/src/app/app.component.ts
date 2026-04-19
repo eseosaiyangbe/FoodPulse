@@ -9,7 +9,7 @@ import 'rxjs/add/operator/map';
 @Injectable()
 
 @Component({
-    selector: 'yelb',
+    selector: 'foodpulse',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss']
     })

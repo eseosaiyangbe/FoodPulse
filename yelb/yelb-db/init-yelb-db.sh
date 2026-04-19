@@ -1,9 +1,11 @@
 #!/bin/bash
 set -e
 
+DB_NAME="${FOODPULSE_DB_NAME:-${YELB_DB_NAME:-foodpulse}}"
+
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
-    CREATE DATABASE yelbdatabase;
-    \connect yelbdatabase;
+    CREATE DATABASE ${DB_NAME};
+    \connect ${DB_NAME};
 	CREATE TABLE restaurants (
     	name        char(30),
     	count       integer,
@@ -14,4 +16,3 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
 	INSERT INTO restaurants (name, count) VALUES ('chipotle', 0);
 	INSERT INTO restaurants (name, count) VALUES ('ihop', 0);
 EOSQL
-
