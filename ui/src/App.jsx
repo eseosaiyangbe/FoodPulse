@@ -78,6 +78,10 @@ function VoteChart({ venues }) {
   );
 }
 
+function sortByVotes(venues) {
+  return [...venues].sort((left, right) => right.votes - left.votes || left.name.localeCompare(right.name));
+}
+
 function App() {
   const [data, setData] = useState(initialState);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,13 +162,11 @@ function App() {
       startTransition(() => {
         setData((current) => ({
           ...current,
-          venues: current.venues
-            .map((venue) =>
-              venue.slug === payload.venue?.slug
-                ? { ...venue, votes: payload.venue.votes }
-                : venue,
-            )
-            .sort((left, right) => right.votes - left.votes || left.name.localeCompare(right.name)),
+          venues: current.venues.map((venue) =>
+            venue.slug === payload.venue?.slug
+              ? { ...venue, votes: payload.venue.votes }
+              : venue,
+          ),
           stats: payload.stats,
         }));
       });
@@ -176,7 +178,8 @@ function App() {
     }
   }
 
-  const leader = data.venues[0];
+  const rankedVenues = sortByVotes(data.venues);
+  const leader = rankedVenues[0];
   const healthStatus = data.health?.status === 'healthy' ? 'healthy' : 'degraded';
   const databaseOnline = data.health?.checks?.database;
   const cacheOnline = data.health?.checks?.cache;
@@ -307,7 +310,7 @@ function App() {
             </div>
             <span className="panel-badge">{leader?.name ?? 'Waiting for votes'} leads</span>
           </div>
-          <VoteChart venues={data.venues} />
+          <VoteChart venues={rankedVenues} />
         </section>
 
         <section className="stats-grid">
