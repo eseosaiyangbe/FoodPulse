@@ -110,10 +110,12 @@ async function fetchVenueRows() {
       v.name,
       v.neighborhood,
       v.category,
+      v.headline,
       v.signature_item,
       v.energy_score,
       v.price_band,
       v.accent_color,
+      v.website_url,
       v.spotlight,
       COUNT(ve.id)::int AS votes
     FROM venues v

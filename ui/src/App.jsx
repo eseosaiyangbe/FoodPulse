@@ -266,7 +266,7 @@ function App() {
               </div>
 
               <div className="restaurant-name">{venue.name}</div>
-              <p className="restaurant-copy">{venue.signature_item}</p>
+              <p className="restaurant-copy">{venue.headline}</p>
 
               <div className="restaurant-labels">
                 <span className="restaurant-label">{venue.neighborhood}</span>
@@ -274,16 +274,27 @@ function App() {
                 <span className="restaurant-label">{formatVotes(venue.votes)} votes</span>
               </div>
 
+              <p className="restaurant-signature">{venue.signature_item}</p>
               <p className="restaurant-spotlight">{venue.spotlight}</p>
 
-              <button
-                className="vote-button"
-                type="button"
-                disabled={submittingSlug === venue.slug}
-                onClick={() => voteForVenue(venue.slug)}
-              >
-                {submittingSlug === venue.slug ? 'Casting vote...' : `Vote for ${venue.name}`}
-              </button>
+              <div className="restaurant-actions">
+                <a
+                  className="visit-button"
+                  href={venue.website_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Visit website
+                </a>
+                <button
+                  className="vote-button"
+                  type="button"
+                  disabled={submittingSlug === venue.slug}
+                  onClick={() => voteForVenue(venue.slug)}
+                >
+                  {submittingSlug === venue.slug ? 'Casting...' : 'Vote'}
+                </button>
+              </div>
             </article>
           ))}
         </section>
