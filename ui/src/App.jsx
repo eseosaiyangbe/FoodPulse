@@ -10,6 +10,16 @@ function formatVotes(value) {
   return new Intl.NumberFormat('en-US').format(value ?? 0);
 }
 
+function formatGeneratedAt(value) {
+  if (!value) return 'Syncing live data';
+
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(value));
+}
+
 function VoteChart({ venues }) {
   const width = 420;
   const height = 270;
@@ -167,41 +177,89 @@ function App() {
   }
 
   const leader = data.venues[0];
+  const healthStatus = data.health?.status === 'healthy' ? 'healthy' : 'degraded';
+  const databaseOnline = data.health?.checks?.database;
+  const cacheOnline = data.health?.checks?.cache;
 
   return (
     <div className="page-shell">
       <div className="backdrop backdrop-left" />
       <div className="backdrop backdrop-right" />
+      <div className="grid-glow" />
 
-      <main className="app-frame classic-layout">
+      <main className="app-frame">
         <header className="topbar">
           <div className="branding-mark">
             <span className="branding-orb" />
-            <span>FoodPulse</span>
+            <span>
+              FoodPulse
+              <small>Resilient dining signal</small>
+            </span>
           </div>
           <div className="topbar-actions">
-            <span className={`status-pill ${data.health?.status === 'healthy' ? 'is-good' : 'is-warn'}`}>
-              {data.health?.status === 'healthy' ? 'Healthy' : 'Needs attention'}
+            <span className="status-pill is-soft">Live board</span>
+            <span className={`status-pill ${healthStatus === 'healthy' ? 'is-good' : 'is-warn'}`}>
+              {healthStatus === 'healthy' ? 'Healthy' : 'Needs attention'}
             </span>
           </div>
         </header>
 
-        <section className="welcome-panel">
-          <p className="section-label centered">Live Dining Board</p>
-          <h1 className="welcome-title">Welcome to FoodPulse.</h1>
-          <p className="welcome-copy">
-            Pick the restaurant with the strongest menu story, then watch the board update in real
-            time. Same familiar layout, cleaner dashboard styling.
-          </p>
+        <section className="hero-panel">
+          <div className="hero-copy">
+            <p className="section-label">Live Dining Board</p>
+            <h1 className="welcome-title">A food vote with production-grade resilience.</h1>
+            <p className="welcome-copy">
+              Pick the restaurant with the strongest menu story while FoodPulse keeps the signal
+              flowing through Postgres, Redis, HAProxy, and live observability hooks.
+            </p>
+            <div className="hero-actions">
+              <a className="primary-link" href="#restaurants">Choose a restaurant</a>
+              <a className="secondary-link" href="#pulse">View live pulse</a>
+            </div>
+          </div>
+
+          <aside className="ops-panel" aria-label="FoodPulse platform status">
+            <div className="ops-header">
+              <span className="ops-kicker">Ops Snapshot</span>
+              <span className="ops-time">{formatGeneratedAt(data.stats?.generatedAt)}</span>
+            </div>
+            <div className="ops-pulse">
+              <span>Failover posture</span>
+              <strong>{healthStatus === 'healthy' ? 'Ready' : 'Watch'}</strong>
+              <p>Traffic stays routed through HAProxy while Redis and Postgres checks keep the board honest.</p>
+            </div>
+            <div className="ops-stack">
+              <div className={`ops-row ${databaseOnline ? 'is-online' : 'is-offline'}`}>
+                <span>Postgres route</span>
+                <strong>{databaseOnline ? 'Online' : 'Check DB'}</strong>
+              </div>
+              <div className={`ops-row ${cacheOnline ? 'is-online' : 'is-offline'}`}>
+                <span>Redis cache</span>
+                <strong>{cacheOnline ? 'Online' : 'Check cache'}</strong>
+              </div>
+              <div className="ops-row is-online">
+                <span>Serving node</span>
+                <strong>{data.stats?.hostname ?? 'Pending'}</strong>
+              </div>
+            </div>
+          </aside>
         </section>
 
         {message ? <div className="inline-message centered-message">{message}</div> : null}
 
+        <section className="section-heading" id="restaurants">
+          <div>
+            <p className="section-label">Restaurant Labels</p>
+            <h2>Choose the signal that wins the room.</h2>
+          </div>
+          <span className="section-chip">{formatVotes(data.stats?.activeVenueCount)} kitchens online</span>
+        </section>
+
         <section className="venues-grid">
           {data.venues.map((venue) => (
-            <article className="restaurant-card" key={venue.slug}>
+            <article className="restaurant-card" key={venue.slug} style={{ '--venue-accent': venue.accent_color }}>
               <div className="restaurant-header" style={{ color: venue.accent_color }}>
-                <span className="restaurant-badge" style={{ background: `${venue.accent_color}18`, borderColor: `${venue.accent_color}35` }}>
+                <span className="restaurant-badge">
                   {venue.category}
                 </span>
                 <span className="restaurant-score">{venue.energy_score}/100</span>
@@ -213,6 +271,7 @@ function App() {
               <div className="restaurant-labels">
                 <span className="restaurant-label">{venue.neighborhood}</span>
                 <span className="restaurant-label">{venue.price_band}</span>
+                <span className="restaurant-label">{formatVotes(venue.votes)} votes</span>
               </div>
 
               <p className="restaurant-spotlight">{venue.spotlight}</p>
@@ -229,12 +288,13 @@ function App() {
           ))}
         </section>
 
-        <section className="chart-center-panel">
+        <section className="chart-center-panel" id="pulse">
           <div className="panel-heading">
             <div>
               <p className="panel-label">Vote Split</p>
-              <h2>Live results</h2>
+              <h2>Live pulse</h2>
             </div>
+            <span className="panel-badge">{leader?.name ?? 'Waiting for votes'} leads</span>
           </div>
           <VoteChart venues={data.venues} />
         </section>
