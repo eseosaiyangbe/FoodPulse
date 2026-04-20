@@ -222,17 +222,17 @@ a {
   margin: 0;
   color: #38bdf8;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: 0.74rem;
+  letter-spacing: 0.13em;
+  font-size: 0.66rem;
   font-weight: 800;
 }
 
 .welcome-title {
-  max-width: 12ch;
-  margin: 0.7rem 0 0;
-  font-size: clamp(2.6rem, 7vw, 5.9rem);
-  line-height: 0.92;
-  letter-spacing: -0.07em;
+  max-width: 15ch;
+  margin: 0.62rem 0 0;
+  font-size: clamp(2rem, 4.8vw, 4.15rem);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
 }
 
 .welcome-copy {
@@ -588,7 +588,7 @@ a {
 
 .panel-heading h2 {
   margin: 0.2rem 0 0;
-  font-size: clamp(1.45rem, 2.4vw, 2.1rem);
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
   line-height: 1.1;
   letter-spacing: -0.05em;
 }
