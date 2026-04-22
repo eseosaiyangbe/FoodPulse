@@ -37,7 +37,10 @@ services:
     ports:
       - "127.0.0.1:${FOODPULSE_API_HOST_PORT:-3102}:4567"
     networks:
-      - foodpulse-net
+      foodpulse-net:
+      observability-net:
+        aliases:
+          - foodpulse-api
     restart: always
 
   redis-master:
