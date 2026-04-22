@@ -5,7 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import pg from 'pg';
-import { Counter, Gauge, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
 import { createClient } from 'redis';
 
 const { Pool } = pg;
@@ -56,6 +56,28 @@ const venueLeadGauge = new Gauge({
   registers: [metrics],
 });
 
+const httpRequestDuration = new Histogram({
+  name: 'foodpulse_http_request_duration_seconds',
+  help: 'FoodPulse API HTTP request duration in seconds.',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [metrics],
+});
+
+const httpRequestsTotal = new Counter({
+  name: 'foodpulse_http_requests_total',
+  help: 'Total number of HTTP requests handled by the FoodPulse API.',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [metrics],
+});
+
+const httpErrorsTotal = new Counter({
+  name: 'foodpulse_http_errors_total',
+  help: 'Total number of failed HTTP requests handled by the FoodPulse API.',
+  labelNames: ['method', 'route', 'status_code', 'error_class'],
+  registers: [metrics],
+});
+
 const allowedOrigin = process.env.FOODPULSE_ALLOWED_ORIGIN || 'http://localhost:8090';
 
 app.use(
@@ -72,6 +94,51 @@ app.use(
 );
 app.use(morgan('tiny'));
 app.use(express.json());
+
+function routeLabel(req) {
+  if (req.route?.path) {
+    return req.route.path;
+  }
+
+  return req.path || 'unknown';
+}
+
+function errorClass(statusCode) {
+  if (statusCode >= 500) {
+    return 'server_error';
+  }
+
+  if (statusCode >= 400) {
+    return 'client_error';
+  }
+
+  return 'none';
+}
+
+app.use((req, res, next) => {
+  const endTimer = httpRequestDuration.startTimer();
+
+  res.on('finish', () => {
+    const statusCode = String(res.statusCode);
+    const labels = {
+      method: req.method,
+      route: routeLabel(req),
+      status_code: statusCode,
+    };
+
+    endTimer(labels);
+    httpRequestsTotal.inc(labels);
+
+    if (res.statusCode >= 400) {
+      httpErrorsTotal.inc({
+        ...labels,
+        error_class: errorClass(res.statusCode),
+      });
+    }
+  });
+
+  next();
+});
 
 async function connectRedis() {
   if (!redis.isOpen) {
