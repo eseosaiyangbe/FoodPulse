@@ -66,6 +66,7 @@ Useful follow-up commands:
 
 ```bash
 ./scripts/cluster-status.sh
+./scripts/docker-storage-check.sh
 ./scripts/redis-failover-drill.sh
 ./scripts/pg-failover-drill.sh
 ```
@@ -130,3 +131,13 @@ The HA lab still uses Docker Compose locally, but the application boundary is no
 - `scripts/pg-failover-drill.sh` is intentionally a manual lab drill, not a production failover controller
 - the Postgres and Redis HA topologies are educational and operator-friendly, not full self-healing platforms
 - the central control plane currently blackbox-checks the browser surface; it does not yet scrape the new API metrics endpoint directly
+
+## Operator Notes
+
+Run `./scripts/docker-storage-check.sh` during incident triage or before demos if the local Docker runtime has been carrying multiple projects for a while. It reports:
+
+- overall Docker storage usage
+- each FoodPulse container's logging policy
+- the largest Docker `json-file` logs it can inspect from the local runtime
+
+The current `FoodPulse` Compose file does not pin `platform:` to `linux/amd64`. If Apple Silicon hosts still show AMD64 warnings for Redis or HAProxy, that comes from the local Docker image/runtime state rather than the repo configuration. In that case, inspect the local image platform selection and refresh the affected images if needed.
