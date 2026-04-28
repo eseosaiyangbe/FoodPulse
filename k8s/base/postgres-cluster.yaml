@@ -1,0 +1,26 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: foodpulse-postgres
+spec:
+  instances: 2
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: foodpulse
+      owner: foodpulse
+      secret:
+        name: foodpulse-postgres-app
+      postInitApplicationSQLRefs:
+        configMapRefs:
+          - name: foodpulse-db-bootstrap
+            key: 01-seed.sql
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  storage:
+    size: 4Gi

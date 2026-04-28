@@ -1,0 +1,36 @@
+CREATE TABLE venues (
+  slug text PRIMARY KEY,
+  name text NOT NULL,
+  neighborhood text NOT NULL,
+  category text NOT NULL,
+  headline text NOT NULL,
+  signature_item text NOT NULL,
+  energy_score integer NOT NULL CHECK (energy_score BETWEEN 0 AND 100),
+  price_band text NOT NULL,
+  accent_color text NOT NULL,
+  website_url text NOT NULL,
+  spotlight text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vote_events (
+  id bigserial PRIMARY KEY,
+  venue_slug text NOT NULL REFERENCES venues(slug) ON DELETE CASCADE,
+  voted_at timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO venues (slug, name, neighborhood, category, headline, signature_item, energy_score, price_band, accent_color, website_url, spotlight)
+VALUES
+  ('naija-jollof', 'Naija Jollof', 'Toronto, Canada', 'Nigerian comfort food', 'Lagos-style jollof energy served like a homecoming.', 'Jollof rice with chicken, plantain, and coleslaw', 94, '$$', '#16a34a', 'https://naijajollof.com/', 'Nigerian classics, catering, pickup, and delivery with a warm Toronto community feel.'),
+  ('tumerico', 'Tumerico', 'Tucson, Arizona', 'Vegan Latin kitchen', 'Inventive Latin plant-based plates with local heritage ingredients.', 'Fresh vegan tacos and rotating Latin specials', 97, '$$', '#f59e0b', 'https://www.tumerico.com/', 'A celebrated Tucson kitchen led by Chef Wendy Garcia with bold vegetarian and vegan flavor.'),
+  ('street-taco-beer', 'STREET Taco and Beer Co.', 'Tucson, Arizona', 'Street-style Mexican', 'Tacos, beer, and Tucson street-food swagger in every bite.', 'Street tacos with onion, cilantro, and cold beer', 90, '$', '#ef4444', 'https://street.restaurant/', 'Authentic street-style tacos, tortas, local beers, and the bacon-wrapped STREET Dog.'),
+  ('rooh', 'ROOH', 'San Francisco, Palo Alto, New Delhi', 'Progressive Indian', 'Modern Indian dining with color, technique, and a little theatre.', 'Dahi puri with yogurt mousse and tamarind', 93, '$$$', '#7c3aed', 'https://www.roohrestaurants.com/', 'Progressive Indian menus across San Francisco, Palo Alto, and New Delhi with signature small plates.'),
+  ('z-and-y-restaurant', 'Z & Y Restaurant', 'San Francisco Chinatown', 'Szechuan institution', 'Chinatown heat from a chef trusted by presidents.', 'Szechuan fish filet with flaming chili oil', 96, '$$', '#dc2626', 'https://www.zandyrestaurant.com/', 'Award-winning authentic Szechuan cuisine from Chef Lijun Han in historic San Francisco Chinatown.'),
+  ('pai-northern-thai', 'PAI Northern Thai Kitchen', 'Toronto, Canada', 'Northern Thai', 'Toronto''s Northern Thai favorite with Michelin Guide shine.', 'Khao soi and Northern Thai street-market plates', 95, '$$', '#0ea5e9', 'https://www.paitoronto.com/', 'A Michelin Guide Toronto restaurant known for lively Northern Thai cooking and big downtown energy.'),
+  ('little-india-toronto', 'Little India', 'Toronto, Canada', 'Indian dining and catering', 'Downtown Toronto Indian comfort with a hundred-plus-item menu.', 'Butter chicken, tandoori plates, curries, and catering trays', 92, '$$', '#2563eb', 'https://littleindia.ca/', 'A long-running Toronto Indian restaurant offering dine-in, delivery, pickup, catering, and vegetarian-friendly options.'),
+  ('perfect-chinese-restaurant', 'Perfect Chinese Restaurant', 'Scarborough, Canada', 'Chinese seafood and dim sum', 'Scarborough late-night dim sum and seafood built for every hour.', 'Dim sum, seafood, beef chow fun, and classic Chinese plates', 91, '$$', '#0f766e', 'https://perfectchineserestaurant.com/', 'A trusted Scarborough Chinese restaurant with online ordering, generous seating, seafood dishes, and dim sum energy.');
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO foodpulse;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO foodpulse;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO foodpulse;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO foodpulse;

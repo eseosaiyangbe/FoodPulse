@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: foodpulse-app-config
+data:
+  FOODPULSE_ALLOWED_ORIGIN: http://foodpulse.devops.local
+  FOODPULSE_DB_NAME: foodpulse
+  FOODPULSE_DB_PORT: "5432"
+  FOODPULSE_DB_SERVER: foodpulse-postgres-rw
+  FOODPULSE_DB_USER: foodpulse
+  FOODPULSE_REDIS_MASTER_NAME: foodpulse-cache
+  FOODPULSE_REDIS_SENTINELS: foodpulse-redis-0.foodpulse-redis-headless:26379,foodpulse-redis-1.foodpulse-redis-headless:26379,foodpulse-redis-2.foodpulse-redis-headless:26379

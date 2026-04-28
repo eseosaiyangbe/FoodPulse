@@ -3,10 +3,10 @@ import os from 'node:os';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import Redis from 'ioredis';
 import morgan from 'morgan';
 import pg from 'pg';
 import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
-import { createClient } from 'redis';
 
 const { Pool } = pg;
 
@@ -20,14 +20,8 @@ const dbConfig = {
   password: process.env.FOODPULSE_DB_PASSWORD || 'change-me',
 };
 
-const redisUrl = `redis://:${encodeURIComponent(
-  process.env.FOODPULSE_REDIS_PASSWORD || 'admin',
-)}@${process.env.FOODPULSE_REDIS_SERVER || 'redis-haproxy'}:${Number(
-  process.env.FOODPULSE_REDIS_PORT || 6379,
-)}`;
-
 const pool = new Pool(dbConfig);
-const redis = createClient({ url: redisUrl });
+const redis = new Redis(buildRedisConfig());
 
 redis.on('error', (error) => {
   console.error('redis error', error.message);
@@ -141,9 +135,60 @@ app.use((req, res, next) => {
 });
 
 async function connectRedis() {
-  if (!redis.isOpen) {
+  if (redis.status === 'ready') {
+    return;
+  }
+
+  if (redis.status === 'connecting' || redis.status === 'connect') {
+    await redis.ping();
+    return;
+  }
+
+  if (redis.status === 'wait' || redis.status === 'close' || redis.status === 'end') {
     await redis.connect();
   }
+}
+
+function parseSentinels(value) {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [host, port] = entry.split(':');
+      return {
+        host,
+        port: Number(port || 26379),
+      };
+    });
+}
+
+function buildRedisConfig() {
+  const password = process.env.FOODPULSE_REDIS_PASSWORD || 'admin';
+  const sentinels = process.env.FOODPULSE_REDIS_SENTINELS;
+  const masterName = process.env.FOODPULSE_REDIS_MASTER_NAME || 'foodpulse-cache';
+
+  if (sentinels) {
+    return {
+      sentinels: parseSentinels(sentinels),
+      name: masterName,
+      password,
+      sentinelPassword: process.env.FOODPULSE_REDIS_SENTINEL_PASSWORD || password,
+      connectTimeout: 5000,
+      enableReadyCheck: true,
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+    };
+  }
+
+  return {
+    host: process.env.FOODPULSE_REDIS_SERVER || 'redis-haproxy',
+    port: Number(process.env.FOODPULSE_REDIS_PORT || 6379),
+    password,
+    connectTimeout: 5000,
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+  };
 }
 
 async function incrementPageViews() {

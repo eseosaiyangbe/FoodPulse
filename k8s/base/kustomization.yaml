@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - app-config.yaml
+  - postgres-cluster.yaml
+  - redis.yaml
+  - api.yaml
+  - ui.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+
+configMapGenerator:
+  - name: foodpulse-db-bootstrap
+    files:
+      - 01-seed.sql=db-init.sql
+  - name: foodpulse-redis-scripts
+    files:
+      - redis-start.sh=redis-start.sh
+      - sentinel-start.sh=sentinel-start.sh
+
+generatorOptions:
+  disableNameSuffixHash: true

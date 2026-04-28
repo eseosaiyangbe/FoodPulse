@@ -11,6 +11,7 @@ We replaced the inherited legacy runtime with an owned stack:
 - a Postgres primary/replica topology
 - Redis replication plus Sentinel failover
 - HAProxy routing for Postgres and Redis
+- an owned Kubernetes path in [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)
 
 In the wider workspace, `FoodPulse` is still the **resilience and failover lab**, but it now has an app surface we control end to end.
 
@@ -31,6 +32,7 @@ The repo layout is intentionally simple:
 - [ui](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/ui) contains the modern frontend
 - [api](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/api) contains the modern backend
 - [postgres](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/postgres), [redis](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/redis), [sentinel](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/sentinel), and [haproxy](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/haproxy) contain the HA lab infrastructure
+- [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s) contains the owned Kubernetes deployment model for `dev` and `prod`
 - [scripts](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/scripts) contains operator workflows
 
 ## Workspace Integration
@@ -77,6 +79,29 @@ To stop the local stack:
 ./scripts/stop.sh
 ```
 
+## Kubernetes Path
+
+`FoodPulse` now has an owned Kubernetes path that intentionally diverges from the Compose lab where the platform should do better:
+
+- Compose keeps `HAProxy` because it is useful for local failover drills
+- Kubernetes replaces Postgres `HAProxy` with `CloudNativePG`
+- Kubernetes replaces Redis `HAProxy` with Sentinel-aware client discovery
+- `dev` and `prod` are separate overlays from the start, not an afterthought
+
+The active local cluster path is `k3s`:
+
+```bash
+./scripts/k8s-dev-deploy.sh
+./scripts/k8s-dev-verify.sh
+./scripts/k8s-dev-destroy.sh
+```
+
+Authoritative Kubernetes references:
+
+- [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)
+- [k3s-dev-deployment.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/k3s-dev-deployment.md)
+- [architecture.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/architecture.md)
+
 ## Local URLs
 
 - app: `http://localhost:8090`
@@ -103,6 +128,9 @@ Important variables include:
 - `FOODPULSE_REDIS_SERVER`
 - `FOODPULSE_REDIS_PORT`
 - `FOODPULSE_REDIS_PASSWORD`
+- `FOODPULSE_REDIS_SENTINELS`
+- `FOODPULSE_REDIS_MASTER_NAME`
+- `FOODPULSE_REDIS_SENTINEL_PASSWORD`
 - `FOODPULSE_ALLOWED_ORIGIN`
 - `PG_REPLICATOR_PASSWORD`
 - `FOODPULSE_UI_HOST_PORT`
@@ -116,20 +144,21 @@ The default host-port contract is intentionally normalized so this repo can run 
 
 ## Kubernetes Readiness
 
-The owned app surface is now structured to translate more cleanly into Kubernetes later:
+The owned app surface is now structured to translate cleanly into Kubernetes:
 
 - separate UI and API images
 - environment-driven runtime contracts
 - dedicated health endpoint
 - dedicated metrics endpoint
-- stateful dependencies accessed through stable service names
-
-The HA lab still uses Docker Compose locally, but the application boundary is now much closer to a real cluster deployment model.
+- `CloudNativePG` for PostgreSQL failover and service discovery
+- Sentinel-aware Redis failover without an application-owned proxy
+- explicit `dev` and `prod` overlays
 
 ## Known Caveats
 
 - `scripts/pg-failover-drill.sh` is intentionally a manual lab drill, not a production failover controller
-- the Postgres and Redis HA topologies are educational and operator-friendly, not full self-healing platforms
+- the Compose Postgres and Redis HA topologies are educational and operator-friendly, not full self-healing platforms
+- the Kubernetes `prod` overlay is a deployment contract, not a fully exercised production environment yet
 - the central control plane currently blackbox-checks the browser surface; it does not yet scrape the new API metrics endpoint directly
 
 ## Operator Notes

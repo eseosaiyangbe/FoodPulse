@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: foodpulse-ui
+spec:
+  selector:
+    app.kubernetes.io/name: foodpulse-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foodpulse-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: foodpulse-ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: foodpulse-ui
+    spec:
+      containers:
+        - name: ui
+          image: foodpulse-ui:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

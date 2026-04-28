@@ -1,0 +1,85 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: foodpulse-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+labels:
+  - pairs:
+      cluster: k3s
+      environment: prod
+    includeSelectors: false
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: foodpulse-app-config
+    patch: |-
+      - op: replace
+        path: /data/FOODPULSE_ALLOWED_ORIGIN
+        value: https://foodpulse.prod.example.com
+  - target:
+      kind: Ingress
+      name: foodpulse
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: foodpulse.prod.example.com
+  - target:
+      kind: Cluster
+      name: foodpulse-postgres
+    patch: |-
+      - op: replace
+        path: /spec/instances
+        value: 3
+      - op: replace
+        path: /spec/storage/size
+        value: 20Gi
+      - op: replace
+        path: /spec/resources/requests/cpu
+        value: 500m
+      - op: replace
+        path: /spec/resources/requests/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/resources/limits/cpu
+        value: "2"
+      - op: replace
+        path: /spec/resources/limits/memory
+        value: 2Gi
+  - target:
+      kind: StatefulSet
+      name: foodpulse-redis
+    patch: |-
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 8Gi
+  - target:
+      kind: Deployment
+      name: foodpulse-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 250m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 384Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1Gi
+  - target:
+      kind: Deployment
+      name: foodpulse-ui
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
