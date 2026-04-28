@@ -6,15 +6,10 @@ namespace: foodpulse-dev
 resources:
   - namespace.yaml
   - ../../base
-  - postgres-app-secret.yaml
-
-secretGenerator:
-  - name: foodpulse-app-secrets
-    envs:
-      - dev-secrets.env
-
-generatorOptions:
-  disableNameSuffixHash: true
+  - vault-serviceaccount.yaml
+  - vault-secret-store.yaml
+  - vault-app-external-secret.yaml
+  - vault-postgres-external-secret.yaml
 
 images:
   - name: foodpulse-api

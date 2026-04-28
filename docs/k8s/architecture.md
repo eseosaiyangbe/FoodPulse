@@ -64,7 +64,7 @@ This is more Kubernetes-native than carrying a TCP proxy into the application to
 `dev`:
 
 - optimized for local `k3s`
-- local secret generator
+- Vault-backed secret materialization through External Secrets Operator
 - local images
 - smaller storage and replica expectations
 
@@ -85,5 +85,5 @@ This directory is compatible with the wider workspace direction:
 
 That means:
 
-- the `dev` overlay is allowed to carry local-only generated secrets
-- the `prod` overlay is a contract that assumes secrets are injected or materialized outside git
+- both `dev` and `prod` overlays now treat Vault as the secret source of truth
+- External Secrets Operator materializes the Kubernetes Secret objects the workloads consume

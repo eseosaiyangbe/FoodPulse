@@ -14,6 +14,7 @@ Current direction:
 - Redis plus Sentinel-aware client discovery without `HAProxy`
 - `dev` overlay for local `k3s`
 - `prod` overlay as the production contract
+- Vault as the secret source of truth for both environments
 
 Structure:
 

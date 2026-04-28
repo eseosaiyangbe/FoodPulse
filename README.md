@@ -96,6 +96,11 @@ The active local cluster path is `k3s`:
 ./scripts/k8s-dev-destroy.sh
 ```
 
+That Kubernetes path now follows the same workspace rule as `MemFlip` and `SwiftPay`:
+
+- Vault is the source of truth for both `dev` and `prod`
+- External Secrets Operator materializes the runtime secrets inside the cluster
+
 Authoritative Kubernetes references:
 
 - [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)

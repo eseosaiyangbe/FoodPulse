@@ -5,12 +5,17 @@ namespace: foodpulse-prod
 
 resources:
   - namespace.yaml
+  - vault-serviceaccount.yaml
+  - vault-secret-store.yaml
+  - vault-app-external-secret.yaml
+  - vault-postgres-external-secret.yaml
   - ../../base
 
 labels:
   - pairs:
       cluster: k3s
       environment: prod
+      secret-source: vault
     includeSelectors: false
 
 patches:

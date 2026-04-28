@@ -30,12 +30,13 @@ From the `FoodPulse` repo root:
 What the script does:
 
 1. ensures the local `k3s` runtime is ready unless skipped
-2. installs `CloudNativePG` if it is missing
-3. validates the `dev` overlay
-4. builds the local `foodpulse-api:dev` and `foodpulse-ui:dev` images
-5. applies the `FoodPulse/k8s/overlays/dev` overlay
-6. waits for PostgreSQL, Redis, API, and UI readiness
-7. runs the verification path
+2. bootstraps the shared Vault and External Secrets platform unless skipped
+3. installs `CloudNativePG` if it is missing
+4. validates the `dev` overlay
+5. builds the local `foodpulse-api:dev` and `foodpulse-ui:dev` images
+6. applies the `FoodPulse/k8s/overlays/dev` overlay
+7. waits for PostgreSQL, Redis, API, and UI readiness
+8. runs the verification path
 
 ## Verification
 
@@ -67,7 +68,7 @@ This removes the `dev` overlay resources from the cluster. It does not remove th
 
 The `dev` overlay is intentionally local-first:
 
-- local secrets are generated
+- secrets are still local-environment oriented, but Vault is now the source of truth
 - local images are used
 - the namespace is `foodpulse-dev`
 
