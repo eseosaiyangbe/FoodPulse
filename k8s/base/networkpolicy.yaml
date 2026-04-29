@@ -17,3 +17,14 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: cnpg-system
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - platform-observability-dev
+                  - platform-observability-prod
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
