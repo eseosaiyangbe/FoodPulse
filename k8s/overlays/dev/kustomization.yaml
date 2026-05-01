@@ -26,6 +26,9 @@ labels:
     includeSelectors: false
 
 patches:
+  - path: dev-cnpg-ops-patch.yaml
+  - path: dev-resource-requests-patch.yaml
+  - path: dev-rollout-strategy-patch.yaml
   - target:
       kind: ConfigMap
       name: foodpulse-app-config

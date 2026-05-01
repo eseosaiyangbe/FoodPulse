@@ -1,0 +1,9 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: foodpulse-postgres
+spec:
+  startDelay: 300
+  stopDelay: 120
+  smartShutdownTimeout: 60
+  switchoverDelay: 120

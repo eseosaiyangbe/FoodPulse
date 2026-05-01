@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foodpulse-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "96Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foodpulse-ui
+spec:
+  template:
+    spec:
+      containers:
+        - name: ui
+          resources:
+            requests:
+              cpu: "15m"
+              memory: "48Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: foodpulse-postgres
+spec:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: foodpulse-redis
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              cpu: "40m"
+              memory: "96Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+        - name: sentinel
+          resources:
+            requests:
+              cpu: "15m"
+              memory: "32Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
