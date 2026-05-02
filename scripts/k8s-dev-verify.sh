@@ -83,6 +83,13 @@ for _ in {1..20}; do
   fi
   sleep 1
 done
+
+echo
+echo "FoodPulse Validation — environment: dev"
+echo "Base URL: http://127.0.0.1:34567"
+echo "─────────────────────────────────────────"
+echo
+
 curl -fsS http://127.0.0.1:34567/health >/dev/null
 curl -fsS http://127.0.0.1:34567/metrics | rg -q 'foodpulse_votes_total'
 
