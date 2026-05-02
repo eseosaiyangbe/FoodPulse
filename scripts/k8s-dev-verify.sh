@@ -34,7 +34,6 @@ trap cleanup EXIT
 
 require_command kubectl
 require_command curl
-require_command rg
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -91,7 +90,7 @@ echo "────────────────────────�
 echo
 
 curl -fsS http://127.0.0.1:34567/health >/dev/null
-curl -fsS http://127.0.0.1:34567/metrics | rg -q 'foodpulse_votes_total'
+curl -fsS http://127.0.0.1:34567/metrics | grep -q 'foodpulse_votes_total'
 
 echo "[foodpulse-k8s] Verifying PostgreSQL and Redis"
 db_pod="$(kubectl get pods -n foodpulse-dev -l cnpg.io/cluster=foodpulse-postgres,role=primary -o jsonpath='{.items[0].metadata.name}')"
