@@ -13,9 +13,15 @@ Options:
 EOF
 }
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOSTNAME_OVERRIDE="foodpulse.devops.local"
 PORT_FORWARD_PID=""
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "ERROR: Required command not found: $1" >&2
+    exit 1
+  fi
+}
 
 cleanup() {
   if [[ -n "${PORT_FORWARD_PID}" ]]; then
@@ -25,6 +31,10 @@ cleanup() {
 }
 
 trap cleanup EXIT
+
+require_command kubectl
+require_command curl
+require_command rg
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -55,6 +65,7 @@ if [[ -z "${TRAEFIK_ADDR}" ]]; then
 fi
 
 echo "[foodpulse-k8s] Traefik address: ${TRAEFIK_ADDR}"
+echo "[foodpulse-k8s] Verifying Kubernetes objects"
 kubectl get pods -n foodpulse-dev
 kubectl get svc -n foodpulse-dev
 kubectl get ingress -n foodpulse-dev
@@ -63,7 +74,7 @@ echo "[foodpulse-k8s] Verifying ingress endpoints"
 curl -fsS -H "Host: ${HOSTNAME_OVERRIDE}" "http://${TRAEFIK_ADDR}/" >/dev/null
 curl -fsS -H "Host: ${HOSTNAME_OVERRIDE}" "http://${TRAEFIK_ADDR}/health" >/dev/null
 
-echo "[foodpulse-k8s] Verifying API metrics via port-forward"
+echo "[foodpulse-k8s] Running end-to-end API validation via port-forward"
 kubectl port-forward -n foodpulse-dev svc/foodpulse-api 34567:4567 >/tmp/foodpulse-k8s-port-forward.log 2>&1 &
 PORT_FORWARD_PID="$!"
 for _ in {1..20}; do
@@ -72,6 +83,7 @@ for _ in {1..20}; do
   fi
   sleep 1
 done
+curl -fsS http://127.0.0.1:34567/health >/dev/null
 curl -fsS http://127.0.0.1:34567/metrics | rg -q 'foodpulse_votes_total'
 
 echo "[foodpulse-k8s] Verifying PostgreSQL and Redis"
