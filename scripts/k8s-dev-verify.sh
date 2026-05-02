@@ -94,8 +94,8 @@ curl -fsS http://127.0.0.1:34567/metrics | grep -q 'foodpulse_votes_total'
 
 echo "[foodpulse-k8s] Verifying PostgreSQL and Redis"
 db_pod="$(kubectl get pods -n foodpulse-dev -l cnpg.io/cluster=foodpulse-postgres,role=primary -o jsonpath='{.items[0].metadata.name}')"
-kubectl exec -n foodpulse-dev "${db_pod}" -- pg_isready -h 127.0.0.1 -p 5432 -U foodpulse -d foodpulse >/dev/null
-kubectl exec -n foodpulse-dev statefulset/foodpulse-redis -c redis -- sh -lc 'redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG' >/dev/null
+kubectl exec -n foodpulse-dev -c postgres "${db_pod}" -- pg_isready -h 127.0.0.1 -p 5432 -U foodpulse -d foodpulse >/dev/null
+kubectl exec -n foodpulse-dev statefulset/foodpulse-redis -c redis -- sh -lc 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping | grep -q PONG' >/dev/null
 kubectl exec -n foodpulse-dev statefulset/foodpulse-redis -c sentinel -- sh -lc 'redis-cli -p 26379 SENTINEL get-master-addr-by-name foodpulse-cache | grep -q 6379' >/dev/null
 
 echo "[foodpulse-k8s] Verification passed"
