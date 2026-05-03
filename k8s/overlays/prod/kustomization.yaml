@@ -21,6 +21,7 @@ labels:
     includeSelectors: false
 
 patches:
+  - path: prod-placement-patch.yaml
   - target:
       kind: ConfigMap
       name: foodpulse-app-config
