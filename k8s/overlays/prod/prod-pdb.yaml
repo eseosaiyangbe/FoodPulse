@@ -1,0 +1,19 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: foodpulse-api-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: foodpulse-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: foodpulse-ui-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: foodpulse-ui

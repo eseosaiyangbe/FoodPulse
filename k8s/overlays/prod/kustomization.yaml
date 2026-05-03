@@ -9,6 +9,8 @@ resources:
   - vault-secret-store.yaml
   - vault-app-external-secret.yaml
   - vault-postgres-external-secret.yaml
+  - prod-hpa.yaml
+  - prod-pdb.yaml
   - ../../base
 
 labels:
@@ -31,8 +33,17 @@ patches:
       name: foodpulse
     patch: |-
       - op: replace
+        path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.entrypoints
+        value: web,websecure
+      - op: replace
         path: /spec/rules/0/host
         value: foodpulse.prod.example.com
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts:
+              - foodpulse.prod.example.com
+            secretName: foodpulse-prod-tls
   - target:
       kind: Cluster
       name: foodpulse-postgres
