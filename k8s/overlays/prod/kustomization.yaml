@@ -28,7 +28,7 @@ patches:
     patch: |-
       - op: replace
         path: /data/FOODPULSE_ALLOWED_ORIGIN
-        value: https://foodpulse.prod.example.com
+        value: https://foodpulse.eseosadevbox.com
   - target:
       kind: Ingress
       name: foodpulse
@@ -41,12 +41,12 @@ patches:
         value: letsencrypt-prod
       - op: replace
         path: /spec/rules/0/host
-        value: foodpulse.prod.example.com
+        value: foodpulse.eseosadevbox.com
       - op: add
         path: /spec/tls
         value:
           - hosts:
-              - foodpulse.prod.example.com
+              - foodpulse.eseosadevbox.com
             secretName: foodpulse-prod-tls
   - target:
       kind: Cluster
