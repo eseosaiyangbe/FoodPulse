@@ -72,11 +72,14 @@ const httpErrorsTotal = new Counter({
   registers: [metrics],
 });
 
-const allowedOrigin = process.env.FOODPULSE_ALLOWED_ORIGIN || 'http://localhost:8090';
+const allowedOrigins = (process.env.FOODPULSE_ALLOWED_ORIGIN || 'http://localhost:8090')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: [allowedOrigin],
+    origin: allowedOrigins,
     credentials: false,
   }),
 );
