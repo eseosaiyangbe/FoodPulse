@@ -7,8 +7,9 @@ primary_fqdn="foodpulse-redis-0.foodpulse-redis-headless.${POD_NAMESPACE}.svc.cl
 
 mkdir -p /data
 
-if [ ! -f /data/redis.conf ]; then
-  cat > /data/redis.conf <<EOF
+# Always rewrite the runtime config so the StatefulSet converges back to the
+# intended topology after a full node restart.
+cat > /data/redis.conf <<EOF
 port 6379
 bind 0.0.0.0
 protected-mode no
@@ -23,11 +24,10 @@ replica-announce-port 6379
 logfile ""
 EOF
 
-  if [ "${ordinal}" != "0" ]; then
-    cat >> /data/redis.conf <<EOF
+if [ "${ordinal}" != "0" ]; then
+  cat >> /data/redis.conf <<EOF
 replicaof ${primary_fqdn} 6379
 EOF
-  fi
 fi
 
 exec redis-server /data/redis.conf
