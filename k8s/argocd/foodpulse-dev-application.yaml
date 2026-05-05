@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/eseosaiyangbe/DevOps-Easy-Learning.git
+    repoURL: https://github.com/eseosaiyangbe/FoodPulse.git
     targetRevision: main
-    path: FoodPulse/k8s/overlays/dev
+    path: k8s/overlays/dev
   destination:
     server: https://kubernetes.default.svc
     namespace: foodpulse-dev
