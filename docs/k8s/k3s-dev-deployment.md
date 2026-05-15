@@ -24,10 +24,10 @@ The workspace helper will bootstrap the local runtime if needed:
 From the `FoodPulse` repo root:
 
 ```bash
-./scripts/k8s-dev-deploy.sh
+./scripts/k8s-start.sh
 ```
 
-What the script does:
+What the script does on a first deploy:
 
 1. ensures the local `k3s` runtime is ready unless skipped
 2. bootstraps the shared Vault and External Secrets platform unless skipped
@@ -37,6 +37,14 @@ What the script does:
 6. applies the `FoodPulse/k8s/overlays/dev` overlay
 7. waits for PostgreSQL, Redis, API, and UI readiness
 8. runs the verification path
+
+If `foodpulse-dev` already exists, `./scripts/k8s-start.sh` resumes the preserved namespace instead:
+
+1. rehydrates the `CloudNativePG` PostgreSQL cluster
+2. scales Redis back up
+3. waits for PostgreSQL and Redis readiness
+4. scales the API and UI back up
+5. waits for the app deployments to become available
 
 ## Verification
 
@@ -54,15 +62,34 @@ The verification path checks:
 - PostgreSQL readiness inside the cluster
 - Redis and Sentinel responsiveness
 
-## Destroy
+## Lifecycle Controls
 
 Run:
 
 ```bash
-./scripts/k8s-dev-destroy.sh
+./scripts/k8s-stop.sh
 ```
 
-This removes the `dev` overlay resources from the cluster. It does not remove the shared `CloudNativePG` operator.
+This safely pauses FoodPulse by:
+
+1. scaling the API and UI deployments to `0`
+2. scaling the Redis StatefulSet to `0`
+3. hibernating the `foodpulse-postgres` `CloudNativePG` cluster with `cnpg.io/hibernation=on`
+
+This preserves:
+
+- namespace `foodpulse-dev`
+- PostgreSQL PVCs
+- Redis PVCs
+- application data
+
+For a destructive reset, run:
+
+```bash
+./scripts/k8s-reset.sh --help
+```
+
+`k8s-reset.sh` deletes the entire `foodpulse-dev` namespace and all state inside it. Use it only when you intentionally want a full rebuild of the FoodPulse environment.
 
 ## Dev And Prod Split
 

@@ -91,9 +91,10 @@ To stop the local stack:
 The active local cluster path is `k3s`:
 
 ```bash
-./scripts/k8s-dev-deploy.sh
+./scripts/k8s-start.sh
+./scripts/k8s-stop.sh
+./scripts/k8s-reset.sh --help
 ./scripts/k8s-dev-verify.sh
-./scripts/k8s-dev-destroy.sh
 ```
 
 That Kubernetes path now follows the same workspace rule as `MemFlip` and `SwiftPay`:
@@ -106,6 +107,21 @@ Authoritative Kubernetes references:
 - [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)
 - [k3s-dev-deployment.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/k3s-dev-deployment.md)
 - [architecture.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/architecture.md)
+
+### Kubernetes Lifecycle Controls
+
+- `./scripts/k8s-start.sh`
+  - starts FoodPulse in `foodpulse-dev`
+  - if the namespace already exists, resumes preserved workloads instead of forcing a fresh deploy
+- `./scripts/k8s-stop.sh`
+  - safely pauses FoodPulse
+  - scales the UI, API, and Redis down
+  - hibernates the `CloudNativePG` PostgreSQL cluster while preserving PVCs
+- `./scripts/k8s-reset.sh`
+  - destructive reset
+  - deletes `foodpulse-dev` and all application data in that namespace
+
+Use `start` and `stop` for normal day-to-day lifecycle control. Use `reset` only when you intentionally want a clean reinstall.
 
 ## Local URLs
 
