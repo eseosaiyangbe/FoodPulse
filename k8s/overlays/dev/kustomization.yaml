@@ -6,6 +6,7 @@ namespace: foodpulse-dev
 resources:
   - namespace.yaml
   - ../../base
+  - state-backup.yaml
   - vault-serviceaccount.yaml
   - vault-secret-store.yaml
   - vault-app-external-secret.yaml

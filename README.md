@@ -95,6 +95,11 @@ The active local cluster path is `k3s`:
 ./scripts/k8s-stop.sh
 ./scripts/k8s-reset.sh --help
 ./scripts/k8s-dev-verify.sh
+./scripts/k8s-backup-run.sh
+./scripts/k8s-backup-inspect.sh
+./scripts/k8s-backup-delete.sh --help
+./scripts/k8s-restore-run.sh
+./scripts/k8s-restore-verify.sh
 ```
 
 That Kubernetes path now follows the same workspace rule as `MemFlip` and `SwiftPay`:
@@ -122,6 +127,31 @@ Authoritative Kubernetes references:
   - deletes `foodpulse-dev` and all application data in that namespace
 
 Use `start` and `stop` for normal day-to-day lifecycle control. Use `reset` only when you intentionally want a clean reinstall.
+
+## Backup And Restore
+
+The owned `foodpulse-dev` Kubernetes path now has an explicit backup and restore contract.
+
+Coverage:
+
+- PostgreSQL business data
+- Redis primary continuity state
+
+Primary reference:
+
+- [K8S_BACKUP_RESTORE.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/K8S_BACKUP_RESTORE.md)
+
+Fast operator checks:
+
+```bash
+kubectl get application foodpulse-dev -n argocd -o wide
+kubectl get cronjob,pvc -n foodpulse-dev | grep -E 'foodpulse-state-backup|foodpulse-backup-storage|NAME'
+./scripts/k8s-backup-run.sh
+./scripts/k8s-backup-inspect.sh
+./scripts/k8s-backup-delete.sh --keep-latest
+./scripts/k8s-restore-run.sh foodpulse-postgres-YYYYMMDDTHHMMSSZ.dump foodpulse-redis-YYYYMMDDTHHMMSSZ.rdb
+./scripts/k8s-restore-verify.sh
+```
 
 ## Local URLs
 

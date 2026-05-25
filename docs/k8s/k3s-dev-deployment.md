@@ -62,6 +62,39 @@ The verification path checks:
 - PostgreSQL readiness inside the cluster
 - Redis and Sentinel responsiveness
 
+## Backup And Restore
+
+The owned `foodpulse-dev` Kubernetes path now has an explicit backup and restore contract.
+
+Coverage:
+
+- PostgreSQL business data
+- Redis primary continuity state
+
+Schedule standard:
+
+- the FoodPulse state backup CronJob runs daily at `04:00 UTC`
+- the CronJob timezone is explicitly pinned to `Etc/UTC`
+- retention keeps the newest `7` backup sets
+
+Primary reference:
+
+- [K8S_BACKUP_RESTORE.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/K8S_BACKUP_RESTORE.md)
+
+Fast operator checks:
+
+```bash
+kubectl get application foodpulse-dev -n argocd -o wide
+kubectl get cronjob,pvc -n foodpulse-dev | grep -E 'foodpulse-state-backup|foodpulse-backup-storage|NAME'
+./scripts/k8s-backup-run.sh
+./scripts/k8s-backup-inspect.sh
+./scripts/k8s-backup-delete.sh --keep-latest
+./scripts/k8s-restore-run.sh foodpulse-postgres-YYYYMMDDTHHMMSSZ.dump foodpulse-redis-YYYYMMDDTHHMMSSZ.rdb
+./scripts/k8s-restore-verify.sh
+```
+
+For a live restore drill under ArgoCD, suspend automated sync on `internal-developer-platform-dev-root` and `foodpulse-dev` before running `k8s-restore-run.sh`, then re-enable automation and hard-refresh `foodpulse-dev` after verification. The full end-to-end sequence is documented in [K8S_BACKUP_RESTORE.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/K8S_BACKUP_RESTORE.md).
+
 ## Lifecycle Controls
 
 Run:

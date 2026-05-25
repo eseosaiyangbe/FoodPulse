@@ -27,3 +27,28 @@ The authoritative operator walkthroughs are in:
 
 - [k3s-dev-deployment.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/k3s-dev-deployment.md)
 - [architecture.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/architecture.md)
+
+## Backup And Restore
+
+The owned Kubernetes path now has an explicit backup and restore path.
+
+Coverage:
+
+- PostgreSQL-backed FoodPulse business data
+- Redis primary continuity state
+
+Primary reference:
+
+- [K8S_BACKUP_RESTORE.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/K8S_BACKUP_RESTORE.md)
+
+Fast operator checks:
+
+```bash
+kubectl get application foodpulse-dev -n argocd -o wide
+kubectl get cronjob,pvc -n foodpulse-dev | grep -E 'foodpulse-state-backup|foodpulse-backup-storage|NAME'
+./scripts/k8s-backup-run.sh
+./scripts/k8s-backup-inspect.sh
+./scripts/k8s-backup-delete.sh --keep-latest
+./scripts/k8s-restore-run.sh foodpulse-postgres-YYYYMMDDTHHMMSSZ.dump foodpulse-redis-YYYYMMDDTHHMMSSZ.rdb
+./scripts/k8s-restore-verify.sh
+```
