@@ -12,6 +12,7 @@ DEPLOYMENTS=(
 STATEFULSETS=(
   foodpulse-redis
 )
+REDIS_ROLLOUT_TIMEOUT="${REDIS_ROLLOUT_TIMEOUT:-600s}"
 
 usage() {
   cat <<'EOF'
@@ -88,7 +89,7 @@ resume_existing_namespace() {
 
   echo "[foodpulse-k8s] Waiting for Redis readiness"
   for sts in "${STATEFULSETS[@]}"; do
-    kubectl rollout status statefulset/"${sts}" -n "${NAMESPACE}" --timeout=300s
+    kubectl rollout status statefulset/"${sts}" -n "${NAMESPACE}" --timeout="${REDIS_ROLLOUT_TIMEOUT}"
   done
 
   echo "[foodpulse-k8s] Scaling application workloads back up"

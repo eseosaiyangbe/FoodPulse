@@ -18,6 +18,12 @@ This is the current owned local Kubernetes path for FoodPulse.
 
 Use this when you want FoodPulse running on the shared local `k3s` runtime with Traefik and the shared control plane.
 
+For preserved namespace resume after `./scripts/k8s-stop.sh`, `./scripts/k8s-start.sh` now gives Redis a longer rollout window by default. You can extend it further when needed:
+
+```bash
+REDIS_ROLLOUT_TIMEOUT=900s ./scripts/k8s-start.sh
+```
+
 See [FoodPulse k3s dev deployment](../docs/k8s/k3s-dev-deployment.md).
 
 See [Kubernetes backup and restore](../docs/k8s/K8S_BACKUP_RESTORE.md).

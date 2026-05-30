@@ -46,6 +46,15 @@ If `foodpulse-dev` already exists, `./scripts/k8s-start.sh` resumes the preserve
 4. scales the API and UI back up
 5. waits for the app deployments to become available
 
+Resume note:
+
+- the Redis StatefulSet is intentionally given a longer convergence window during resume because Sentinel and Redis can take longer to re-establish readiness on the local single-node runtime
+- if you need to override the default resume wait, set `REDIS_ROLLOUT_TIMEOUT`, for example:
+
+```bash
+REDIS_ROLLOUT_TIMEOUT=900s ./scripts/k8s-start.sh
+```
+
 ## Verification
 
 Run:
