@@ -109,7 +109,7 @@ For a live restore drill under ArgoCD, suspend automated sync on `internal-devel
 Run:
 
 ```bash
-./scripts/k8s-stop.sh
+./scripts/k8s-stop.sh --wait --suspend-gitops
 ```
 
 This safely pauses FoodPulse by:
@@ -124,6 +124,17 @@ This preserves:
 - PostgreSQL PVCs
 - Redis PVCs
 - application data
+
+For a preserved stop on the ArgoCD-managed `foodpulse-dev` namespace, automated sync must be suspended first or the controller will reconcile the deployments and StatefulSet back up during the drill. `k8s-stop.sh --suspend-gitops` now handles that directly for:
+
+- `internal-developer-platform-dev-root`
+- `foodpulse-dev`
+
+After resume, re-enable automation with:
+
+```bash
+./scripts/k8s-start.sh --resume-gitops
+```
 
 For a destructive reset, run:
 

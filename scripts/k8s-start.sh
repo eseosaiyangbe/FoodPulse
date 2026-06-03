@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAMESPACE="foodpulse-dev"
 POSTGRES_CLUSTER="foodpulse-postgres"
 BUILD_IMAGES=0
+RESUME_GITOPS=0
 DEPLOYMENTS=(
   foodpulse-api
   foodpulse-ui
@@ -13,6 +14,18 @@ STATEFULSETS=(
   foodpulse-redis
 )
 REDIS_ROLLOUT_TIMEOUT="${REDIS_ROLLOUT_TIMEOUT:-600s}"
+ARGOCD_NAMESPACE="argocd"
+ROOT_APP="internal-developer-platform-dev-root"
+APP_NAME="foodpulse-dev"
+
+resume_gitops() {
+  echo "[foodpulse-k8s] Re-enabling ArgoCD automated sync for ${ROOT_APP} and ${APP_NAME}"
+  kubectl patch application "${ROOT_APP}" -n "${ARGOCD_NAMESPACE}" --type merge \
+    -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' >/dev/null
+  kubectl patch application "${APP_NAME}" -n "${ARGOCD_NAMESPACE}" --type merge \
+    -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true},"syncOptions":["CreateNamespace=true"]}}}' >/dev/null
+  kubectl annotate application "${APP_NAME}" -n "${ARGOCD_NAMESPACE}" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+}
 
 usage() {
   cat <<'EOF'
@@ -25,6 +38,9 @@ intentionally want fresh local image builds.
 
 Options:
   --build      Rebuild images before deploy
+  --resume-gitops
+               Re-enable ArgoCD automated sync for the platform root and
+               foodpulse-dev after workloads are healthy again
   -h, --help   Show this help message
 EOF
 }
@@ -35,6 +51,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --build)
       BUILD_IMAGES=1
+      shift
+      ;;
+    --resume-gitops)
+      RESUME_GITOPS=1
       shift
       ;;
     -h|--help)
@@ -101,6 +121,10 @@ resume_existing_namespace() {
   for deploy in "${DEPLOYMENTS[@]}"; do
     kubectl rollout status deployment/"${deploy}" -n "${NAMESPACE}" --timeout=300s
   done
+
+  if [[ "${RESUME_GITOPS}" -eq 1 ]]; then
+    resume_gitops
+  fi
 }
 
 cmd=("${ROOT_DIR}/scripts/k8s-dev-deploy.sh")
@@ -114,6 +138,10 @@ fi
 if [[ "${BUILD_IMAGES}" -eq 0 ]] && kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
   resume_existing_namespace
   exit 0
+fi
+
+if [[ "${RESUME_GITOPS}" -eq 1 ]]; then
+  echo "[foodpulse-k8s] NOTE: --resume-gitops is ignored during full deploy mode; re-enable automation after the deployment path if needed."
 fi
 
 exec "${cmd[@]}"

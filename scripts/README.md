@@ -18,6 +18,13 @@ This is the current owned local Kubernetes path for FoodPulse.
 
 Use this when you want FoodPulse running on the shared local `k3s` runtime with Traefik and the shared control plane.
 
+For ArgoCD-managed lifecycle drills, suspend automation before a preserved stop and re-enable it after resume:
+
+```bash
+./scripts/k8s-stop.sh --wait --suspend-gitops
+./scripts/k8s-start.sh --resume-gitops
+```
+
 For preserved namespace resume after `./scripts/k8s-stop.sh`, `./scripts/k8s-start.sh` now gives Redis a longer rollout window by default. You can extend it further when needed:
 
 ```bash
