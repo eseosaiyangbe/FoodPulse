@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: foodpulse-prod-resource-quota
+spec:
+  hard:
+    requests.cpu: "3"
+    requests.memory: 5Gi
+    limits.cpu: "8"
+    limits.memory: 12Gi
+    pods: "20"
+    services: "10"
+    persistentvolumeclaims: "6"
+    secrets: "20"
+    configmaps: "12"
