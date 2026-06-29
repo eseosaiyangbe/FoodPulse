@@ -1,0 +1,140 @@
+name: Validate Repository
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "api/**"
+      - "ui/**"
+      - "k8s/**"
+      - "scripts/**"
+      - ".yamllint.yml"
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - ".github/workflows/**"
+      - "api/**"
+      - "ui/**"
+      - "k8s/**"
+      - "scripts/**"
+      - ".yamllint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            api/package-lock.json
+            ui/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Install validation tools
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          python -m pip install --upgrade pip
+          python -m pip install yamllint
+
+          ACTIONLINT_VERSION=1.7.7
+          curl -sSL -o /tmp/actionlint.tgz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/actionlint.tgz -C /tmp
+          sudo install /tmp/actionlint /usr/local/bin/actionlint
+
+      - name: Lint GitHub Actions workflows
+        run: |
+          set -euo pipefail
+          actionlint
+
+      - name: Lint shell scripts
+        run: |
+          set -euo pipefail
+          mapfile -t shell_scripts < <(find scripts k8s/base -type f -name '*.sh' | sort)
+          if [ "${#shell_scripts[@]}" -gt 0 ]; then
+            shellcheck "${shell_scripts[@]}"
+            for script in "${shell_scripts[@]}"; do
+              bash -n "${script}"
+            done
+          fi
+
+      - name: Install API dependencies
+        run: npm --prefix api ci
+
+      - name: Install UI dependencies
+        run: npm --prefix ui ci
+
+      - name: Validate API entrypoint syntax
+        run: node --check api/src/index.js
+
+      - name: Build UI
+        run: npm --prefix ui run build
+
+      - name: Lint YAML files
+        run: |
+          set -euo pipefail
+          mapfile -t yaml_files < <(
+            {
+              find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \)
+              find k8s -type f \( -name '*.yml' -o -name '*.yaml' \)
+              find scripts -type f \( -name '*.yml' -o -name '*.yaml' \)
+            } | sort -u
+          )
+          if [ "${#yaml_files[@]}" -gt 0 ]; then
+            python -m yamllint -c .yamllint.yml -s "${yaml_files[@]}"
+          fi
+
+      - name: Render Kubernetes manifests
+        run: |
+          set -euo pipefail
+          kubectl kustomize k8s/base >/tmp/foodpulse-base.yaml
+          kubectl kustomize k8s/overlays/dev >/tmp/foodpulse-dev.yaml
+          kubectl kustomize k8s/overlays/prod >/tmp/foodpulse-prod.yaml
+
+      - name: Client dry-run Kubernetes manifests
+        run: |
+          set -euo pipefail
+          kubectl apply --dry-run=client -k k8s/overlays/dev >/tmp/foodpulse-dev-dryrun.txt
+          kubectl apply --dry-run=client -k k8s/overlays/prod >/tmp/foodpulse-prod-dryrun.txt
+          kubectl apply --dry-run=client -f k8s/argocd/foodpulse-dev-application.yaml >/tmp/foodpulse-argocd-dev-dryrun.txt
+          kubectl apply --dry-run=client -f k8s/argocd/foodpulse-prod-application.yaml >/tmp/foodpulse-argocd-prod-dryrun.txt
+
+      - name: Summarize validation coverage
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## Validation Coverage
+
+          - GitHub Actions workflow linting via `actionlint`
+          - Shell script linting via `shellcheck` and `bash -n`
+          - Node dependency installation for API and UI
+          - API syntax validation via `node --check`
+          - UI build validation via `vite build`
+          - YAML linting via `yamllint`
+          - `kubectl kustomize` render checks for base, dev, and prod overlays
+          - `kubectl apply --dry-run=client` checks for dev, prod, and ArgoCD application manifests
+          EOF
