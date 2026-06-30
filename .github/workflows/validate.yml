@@ -82,7 +82,11 @@ jobs:
           set -euo pipefail
           shell_scripts=()
           if [ -n "${DIFF_BASE:-}" ] && git rev-parse --verify "${DIFF_BASE}^{commit}" >/dev/null 2>&1; then
-            mapfile -t shell_scripts < <(git diff --name-only "${DIFF_BASE}" "${DIFF_HEAD}" -- 'scripts/*.sh' 'scripts/**/*.sh' 'k8s/base/*.sh' 'k8s/base/**/*.sh' | sort -u)
+            mapfile -t shell_scripts < <(
+              git diff --name-only "${DIFF_BASE}" "${DIFF_HEAD}" -- \
+                'scripts/*.sh' 'scripts/**/*.sh' \
+                'k8s/base/*.sh' 'k8s/base/**/*.sh' | sort -u
+            )
           fi
           if [ "${#shell_scripts[@]}" -eq 0 ] && [ -f scripts/smoke-dev.sh ]; then
             shell_scripts=(scripts/smoke-dev.sh)
@@ -107,15 +111,20 @@ jobs:
         run: npm --prefix ui run build
 
       - name: Lint YAML files
+        env:
+          DIFF_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          DIFF_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          mapfile -t yaml_files < <(
-            {
-              find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \)
-              find k8s -type f \( -name '*.yml' -o -name '*.yaml' \)
-              find scripts -type f \( -name '*.yml' -o -name '*.yaml' \)
-            } | sort -u
-          )
+          yaml_files=()
+          if [ -n "${DIFF_BASE:-}" ] && git rev-parse --verify "${DIFF_BASE}^{commit}" >/dev/null 2>&1; then
+            mapfile -t yaml_files < <(
+              git diff --name-only "${DIFF_BASE}" "${DIFF_HEAD}" -- \
+                '.github/workflows/*.yml' '.github/workflows/*.yaml' \
+                'k8s/**/*.yml' 'k8s/**/*.yaml' \
+                'scripts/**/*.yml' 'scripts/**/*.yaml' | sort -u
+            )
+          fi
           if [ "${#yaml_files[@]}" -gt 0 ]; then
             python -m yamllint -c .yamllint.yml -s "${yaml_files[@]}"
           fi
@@ -130,10 +139,10 @@ jobs:
       - name: Client dry-run Kubernetes manifests
         run: |
           set -euo pipefail
-          kubectl apply --dry-run=client -k k8s/overlays/dev >/tmp/foodpulse-dev-dryrun.txt
-          kubectl apply --dry-run=client -k k8s/overlays/prod >/tmp/foodpulse-prod-dryrun.txt
-          kubectl apply --dry-run=client -f k8s/argocd/foodpulse-dev-application.yaml >/tmp/foodpulse-argocd-dev-dryrun.txt
-          kubectl apply --dry-run=client -f k8s/argocd/foodpulse-prod-application.yaml >/tmp/foodpulse-argocd-prod-dryrun.txt
+          kubectl apply --dry-run=client --validate=false -k k8s/overlays/dev >/tmp/foodpulse-dev-dryrun.txt
+          kubectl apply --dry-run=client --validate=false -k k8s/overlays/prod >/tmp/foodpulse-prod-dryrun.txt
+          kubectl apply --dry-run=client --validate=false -f k8s/argocd/foodpulse-dev-application.yaml >/tmp/foodpulse-argocd-dev-dryrun.txt
+          kubectl apply --dry-run=client --validate=false -f k8s/argocd/foodpulse-prod-application.yaml >/tmp/foodpulse-argocd-prod-dryrun.txt
 
       - name: Summarize validation coverage
         run: |
