@@ -26,10 +26,11 @@ labels:
       environment: dev
     includeSelectors: false
 
+patchesStrategicMerge:
+  - dev-resource-requests-patch.yaml
+  - dev-rollout-strategy-patch.yaml
 patches:
   - path: dev-cnpg-ops-patch.yaml
-  - path: dev-resource-requests-patch.yaml
-  - path: dev-rollout-strategy-patch.yaml
   - target:
       kind: ConfigMap
       name: foodpulse-app-config
