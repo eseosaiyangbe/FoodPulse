@@ -21,8 +21,9 @@ labels:
       secret-source: vault
     includeSelectors: false
 
+patchesStrategicMerge:
+  - prod-placement-patch.yaml
 patches:
-  - path: prod-placement-patch.yaml
   - target:
       kind: ConfigMap
       name: foodpulse-app-config
