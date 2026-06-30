@@ -6,14 +6,33 @@
 
 We replaced the inherited legacy runtime with an owned stack:
 
-- a modern React UI in [ui](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/ui)
-- a Node/Express API in [api](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/api)
+- a modern React UI in [ui](ui)
+- a Node/Express API in [api](api)
 - a Postgres primary/replica topology
 - Redis replication plus Sentinel failover
 - HAProxy routing for Postgres and Redis
-- an owned Kubernetes path in [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)
+- an owned Kubernetes path in [k8s](k8s)
 
 In the wider workspace, `FoodPulse` is still the **resilience and failover lab**, but it now has an app surface we control end to end.
+
+## CI/CD Workflow Model
+
+This repository now uses four delivery lanes:
+
+- `validate.yml`
+  Repository validation for workflows, shell scripts, Node builds, YAML, and Kubernetes render checks.
+- `publish-dockerhub-images.yml`
+  Docker Hub publishing for the `foodpulse-api` and `foodpulse-ui` images with immutable `git-<sha>` tags, Trivy reporting, SPDX SBOM generation, and Cosign signing.
+- `smoke-dev-public.yml`
+  Scheduled and on-demand verification of the active public `dev` edge.
+- `promote-prod.yml`
+  Manual GitOps promotion that updates the held `prod` overlay through a pull request instead of changing the cluster directly.
+- local and platform verification helpers
+  Runtime checks also stay available in operator scripts and the shared observability plane instead of being conflated with image publishing.
+
+For the current `dev`-first posture, `dev` follows `main` plus the mutable `dev` image aliases. That is why there is no separate manual `promote-dev` workflow today. Manual promotion remains a `prod` concern while `prod` stays on hold.
+
+This separation keeps repository validation, artifact creation, active `dev` verification, and dormant `prod` promotion independent. That is the production-grade operating model we want across the workspace.
 
 ## Main Runtime Shape
 
@@ -29,11 +48,11 @@ The stack includes:
 
 The repo layout is intentionally simple:
 
-- [ui](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/ui) contains the modern frontend
-- [api](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/api) contains the modern backend
-- [postgres](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/postgres), [redis](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/redis), [sentinel](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/sentinel), and [haproxy](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/haproxy) contain the HA lab infrastructure
-- [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s) contains the owned Kubernetes deployment model for `dev` and `prod`
-- [scripts](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/scripts) contains operator workflows
+- [ui](ui) contains the modern frontend
+- [api](api) contains the modern backend
+- [postgres](postgres), [redis](redis), [sentinel](sentinel), and [haproxy](haproxy) contain the HA lab infrastructure
+- [k8s](k8s) contains the owned Kubernetes deployment model for `dev` and `prod`
+- [scripts](scripts) contains operator workflows
 
 ## Workspace Integration
 
@@ -106,12 +125,15 @@ That Kubernetes path now follows the same workspace rule as `MemFlip` and `Swift
 
 - Vault is the source of truth for both `dev` and `prod`
 - External Secrets Operator materializes the runtime secrets inside the cluster
+- `dev` keeps local `foodpulse-api:dev` and `foodpulse-ui:dev` images for fast iteration
+- `prod` now expects Docker Hub-backed app images instead of repo-local `:dev` tags
+- `dev` is the active runtime truth today; `prod` remains a held contract path
 
 Authoritative Kubernetes references:
 
-- [k8s](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/k8s)
-- [k3s-dev-deployment.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/k3s-dev-deployment.md)
-- [architecture.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/architecture.md)
+- [k8s](k8s)
+- [k3s-dev-deployment.md](docs/k8s/k3s-dev-deployment.md)
+- [architecture.md](docs/k8s/architecture.md)
 
 ### Kubernetes Lifecycle Controls
 
@@ -139,7 +161,7 @@ Coverage:
 
 Primary reference:
 
-- [K8S_BACKUP_RESTORE.md](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/docs/k8s/K8S_BACKUP_RESTORE.md)
+- [K8S_BACKUP_RESTORE.md](docs/k8s/K8S_BACKUP_RESTORE.md)
 
 Fast operator checks:
 
@@ -167,7 +189,7 @@ This repo expects a root `.env` file.
 
 Start from:
 
-- [.env.example](/Users/raymond/Documents/DevOps-Easy-Learning/FoodPulse/.env.example)
+- [.env.example](.env.example)
 
 Important variables include:
 
@@ -204,6 +226,7 @@ The owned app surface is now structured to translate cleanly into Kubernetes:
 - `CloudNativePG` for PostgreSQL failover and service discovery
 - Sentinel-aware Redis failover without an application-owned proxy
 - explicit `dev` and `prod` overlays
+- a separate image-publish and GitOps-promotion workflow model
 
 ## Known Caveats
 

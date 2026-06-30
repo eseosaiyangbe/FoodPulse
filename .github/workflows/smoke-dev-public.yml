@@ -1,0 +1,55 @@
+name: Smoke Test Public Dev Edge
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "19 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-public-dev:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_URL: https://foodpulse.eseosadevbox.com
+    steps:
+      - name: Check public dev root and health endpoint
+        run: |
+          set -euo pipefail
+
+          ROOT_HEADERS="public-root-headers.txt"
+          HEALTH_HEADERS="public-health-headers.txt"
+
+          ROOT_CODE=$(curl -k -sS -o /dev/null -D "$ROOT_HEADERS" -w '%{http_code}' "${PUBLIC_URL}/")
+          HEALTH_CODE=$(curl -k -sS -o /dev/null -D "$HEALTH_HEADERS" -w '%{http_code}' "${PUBLIC_URL}/health")
+
+          {
+            echo "## Public dev smoke result"
+            echo
+            printf -- "- url: %s\n" "$PUBLIC_URL"
+            printf -- "- root status: %s\n" "$ROOT_CODE"
+            printf -- "- health status: %s\n" "$HEALTH_CODE"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ROOT_CODE" != "200" ]; then
+            echo "Unexpected root status code" >&2
+            cat "$ROOT_HEADERS" >&2
+            exit 1
+          fi
+
+          if [ "$HEALTH_CODE" != "200" ]; then
+            echo "Unexpected health status code" >&2
+            cat "$HEALTH_HEADERS" >&2
+            exit 1
+          fi
+
+      - name: Upload public smoke headers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-dev-smoke-${{ github.run_id }}
+          path: |
+            public-root-headers.txt
+            public-health-headers.txt
+          retention-days: 14

@@ -8,6 +8,7 @@ This is the current owned local Kubernetes path for FoodPulse.
 ./scripts/k8s-start.sh
 ./scripts/k8s-stop.sh
 ./scripts/k8s-reset.sh --help
+./scripts/smoke-dev.sh
 ./scripts/k8s-dev-verify.sh
 ./scripts/k8s-backup-run.sh
 ./scripts/k8s-backup-inspect.sh
@@ -34,6 +35,19 @@ REDIS_ROLLOUT_TIMEOUT=900s ./scripts/k8s-start.sh
 See [FoodPulse k3s dev deployment](../docs/k8s/k3s-dev-deployment.md).
 
 See [Kubernetes backup and restore](../docs/k8s/K8S_BACKUP_RESTORE.md).
+
+### `smoke-dev.sh`
+**Public dev smoke helper** for the active `FoodPulse` runtime path.
+
+```bash
+./scripts/smoke-dev.sh
+```
+
+Features:
+
+- confirms the `foodpulse-dev` Argo CD application is present
+- checks current workload state in `foodpulse-dev`
+- verifies the public dev root and `/health` endpoints
 
 ### `k8s-backup-run.sh`
 **FoodPulse state backup runner** for the owned `k3s` path.

@@ -1,0 +1,264 @@
+name: Publish Docker Hub Images
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    tags:
+      - "v*"
+    paths:
+      - ".github/workflows/publish-dockerhub-images.yml"
+      - "api/**"
+      - "ui/**"
+  workflow_dispatch:
+    inputs:
+      publish_dev_alias:
+        description: Also publish the mutable dev alias
+        required: false
+        type: boolean
+        default: true
+      publish_prod_alias:
+        description: Also publish the mutable prod/latest aliases
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-api:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: docker.io
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve API image repository
+        id: image_repo
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_API_REPOSITORY: ${{ vars.DOCKERHUB_API_REPOSITORY }}
+        run: |
+          set -eu
+
+          if [ -z "${DOCKERHUB_USERNAME:-}" ]; then
+            echo "DOCKERHUB_USERNAME GitHub variable is required" >&2
+            exit 1
+          fi
+
+          IMAGE_REPOSITORY="${DOCKERHUB_API_REPOSITORY:-foodpulse-api}"
+          IMAGE_NAME="${DOCKERHUB_USERNAME}/${IMAGE_REPOSITORY}"
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image_repo.outputs.image_name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish_dev_alias) }}
+            type=raw,value=prod,enable=${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_prod_alias) }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_prod_alias) }}
+
+      - name: Resolve immutable scan tag
+        id: scan_image
+        run: |
+          set -eu
+          SCAN_IMAGE=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | grep ':git-' | head -n 1)
+          if [ -z "${SCAN_IMAGE:-}" ]; then
+            echo "Unable to resolve immutable git-<sha> tag for scanning" >&2
+            exit 1
+          fi
+          echo "scan_image=$SCAN_IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push API image
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ steps.scan_image.outputs.scan_image }}
+          format: table
+          output: foodpulse-api-trivy-report.txt
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Generate API SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.scan_image.outputs.scan_image }}
+          format: spdx-json
+          output-file: foodpulse-api-sbom.spdx.json
+
+      - name: Upload API security artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: foodpulse-api-security-artifacts-${{ github.sha }}
+          path: |
+            foodpulse-api-trivy-report.txt
+            foodpulse-api-sbom.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Sign immutable API image digest with Cosign
+        env:
+          IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ steps.image_repo.outputs.image_name }}
+          IMAGE_DIGEST: ${{ steps.build_push.outputs.digest }}
+        run: |
+          set -eu
+          cosign sign --yes "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
+
+  publish-ui:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: docker.io
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve UI image repository
+        id: image_repo
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_UI_REPOSITORY: ${{ vars.DOCKERHUB_UI_REPOSITORY }}
+        run: |
+          set -eu
+
+          if [ -z "${DOCKERHUB_USERNAME:-}" ]; then
+            echo "DOCKERHUB_USERNAME GitHub variable is required" >&2
+            exit 1
+          fi
+
+          IMAGE_REPOSITORY="${DOCKERHUB_UI_REPOSITORY:-foodpulse-ui}"
+          IMAGE_NAME="${DOCKERHUB_USERNAME}/${IMAGE_REPOSITORY}"
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image_repo.outputs.image_name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish_dev_alias) }}
+            type=raw,value=prod,enable=${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_prod_alias) }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_prod_alias) }}
+
+      - name: Resolve immutable scan tag
+        id: scan_image
+        run: |
+          set -eu
+          SCAN_IMAGE=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | grep ':git-' | head -n 1)
+          if [ -z "${SCAN_IMAGE:-}" ]; then
+            echo "Unable to resolve immutable git-<sha> tag for scanning" >&2
+            exit 1
+          fi
+          echo "scan_image=$SCAN_IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push UI image
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ui
+          file: ./ui/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ steps.scan_image.outputs.scan_image }}
+          format: table
+          output: foodpulse-ui-trivy-report.txt
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Generate UI SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.scan_image.outputs.scan_image }}
+          format: spdx-json
+          output-file: foodpulse-ui-sbom.spdx.json
+
+      - name: Upload UI security artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: foodpulse-ui-security-artifacts-${{ github.sha }}
+          path: |
+            foodpulse-ui-trivy-report.txt
+            foodpulse-ui-sbom.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Sign immutable UI image digest with Cosign
+        env:
+          IMAGE_REPOSITORY: ${{ env.REGISTRY }}/${{ steps.image_repo.outputs.image_name }}
+          IMAGE_DIGEST: ${{ steps.build_push.outputs.digest }}
+        run: |
+          set -eu
+          cosign sign --yes "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
+
+  summarize:
+    runs-on: ubuntu-latest
+    needs:
+      - publish-api
+      - publish-ui
+    steps:
+      - name: Summarize published tags
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## FoodPulse image policy
+
+          - API and UI images publish independently to Docker Hub
+          - branch pushes publish branch tags plus immutable `git-<sha>` tags
+          - the `main` branch also publishes the mutable `dev` alias
+          - version tags (`v*`) publish the version tag itself, immutable `git-<sha>`, and mutable `prod` and `latest` aliases
+          - production manifests should move through GitOps promotion and pin immutable tags
+          - Trivy reports, SPDX SBOMs, and keyless Cosign signatures are generated for both app images
+          EOF
