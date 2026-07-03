@@ -20,9 +20,24 @@ jobs:
 
           ROOT_HEADERS="public-root-headers.txt"
           HEALTH_HEADERS="public-health-headers.txt"
+          HEALTH_BODY="public-health.json"
 
           ROOT_CODE=$(curl -k -sS -o /dev/null -D "$ROOT_HEADERS" -w '%{http_code}' "${PUBLIC_URL}/")
-          HEALTH_CODE=$(curl -k -sS -o /dev/null -D "$HEALTH_HEADERS" -w '%{http_code}' "${PUBLIC_URL}/health")
+          HEALTH_CODE=$(curl -k -sS -o "$HEALTH_BODY" -D "$HEALTH_HEADERS" -w '%{http_code}' "${PUBLIC_URL}/health")
+
+          python - <<'PY'
+          import json
+
+          with open("public-health.json", "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          if payload.get("status") != "healthy":
+              raise SystemExit(f"Unexpected health status payload: {payload}")
+
+          checks = payload.get("checks") or {}
+          if checks.get("database") is not True or checks.get("cache") is not True:
+              raise SystemExit(f"Unexpected dependency checks payload: {payload}")
+          PY
 
           {
             echo "## Public dev smoke result"
@@ -30,6 +45,7 @@ jobs:
             printf -- "- url: %s\n" "$PUBLIC_URL"
             printf -- "- root status: %s\n" "$ROOT_CODE"
             printf -- "- health status: %s\n" "$HEALTH_CODE"
+            printf -- "- health contract: %s\n" "status=healthy, checks.database=true, checks.cache=true"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$ROOT_CODE" != "200" ]; then
@@ -52,4 +68,5 @@ jobs:
           path: |
             public-root-headers.txt
             public-health-headers.txt
+            public-health.json
           retention-days: 14
