@@ -36,6 +36,10 @@ This separation keeps repository validation, artifact creation, active `dev` ver
 
 ## Main Runtime Shape
 
+![FoodPulse platform architecture](docs/architecture/foodpulse-platform-architecture.png)
+
+*FoodPulse as designed: one resilience model in two honest shapes. The Compose lab keeps HAProxy in front of PostgreSQL and Redis because visible backend state makes cause and effect legible during failover drills. The Kubernetes path deliberately replaces that with CloudNativePG for PostgreSQL and Sentinel aware client discovery for Redis, with Vault as the secret source of truth through External Secrets Operator, and observability carried centrally by the Obervability-Stack control plane. The drill model is the deliverable: live audit (23 of 23 checks, Phase 6 lab audit), the Redis failover drill executed and documented, the PostgreSQL failover drill procedure, and cluster status inspected across proxy, dependency, and application together. The full design record, with the editable Mermaid source for this image, is in [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).*
+
 The stack includes:
 
 - `foodpulse-ui`
