@@ -1,1 +1,38 @@
+# Secrets and local environment
 .env
+.env.*
+!.env.example
+*.env
+
+# Backups, dumps and archives
+foodpulse-postgres-*.dump
+foodpulse-redis-*.rdb
+*.dump
+*.rdb
+*.sql.gz
+backups/
+*.tar
+*.tar.gz
+
+# Local phase and planning scratch files
+phase*
+PHASE*
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Logs
+*.log
+logs/
+
+# Local tooling state
+*.kubeconfig
+
+# OS and editor files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
